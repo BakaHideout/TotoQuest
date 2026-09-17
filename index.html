@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#120c1f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>TotoQuest</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  html, body { margin:0; padding:0; background:#0e1420; height:100%; }
+  body { display:flex; align-items:center; justify-content:center; }
+  #toto-root { max-width:100vw !important; height:100vh !important; border-radius:0 !important; }
+  @media (min-width: 500px){ #toto-root { max-width:480px !important; height:860px !important; border-radius:26px !important; } }
+  #tq-update-banner {
+    position:fixed; left:12px; right:12px; bottom:16px; z-index:99999;
+    background:linear-gradient(135deg,#ff8a3d,#ff5f6d); color:#fff; font-family:'Baloo 2','Segoe UI',sans-serif;
+    font-weight:800; font-size:14px; padding:13px 16px; border-radius:14px; text-align:center;
+    box-shadow:0 10px 28px rgba(0,0,0,0.4); cursor:pointer; display:none;
+  }
+  #tq-update-banner.show { display:block; animation: tqSlideUp 0.35s ease-out; }
+  @keyframes tqSlideUp { from{ transform:translateY(30px); opacity:0;} to{ transform:translateY(0); opacity:1;} }
+</style>
+</head>
+<body>
+<style>
+  #toto-root, #toto-root * { box-sizing: border-box; }
+  #toto-root {
+    --grass1: #6fd86a;
+    --grass2: #58c453;
+    --sky1: #7ec8f7;
+    --sky2: #bfe8ff;
+    --path: #e8d9b5;
+    --ink: #22303a;
+    --panel: rgba(255,255,255,0.92);
+    --accent: #ff8a3d;
+    --purple: #7b5cff;
+    font-family: 'Baloo 2', 'Segoe UI', system-ui, sans-serif;
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    height: 780px;
+    margin: 0 auto;
+    background: #0e1420;
+    border-radius: 26px;
+    overflow: hidden;
+    color: var(--ink);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    user-select: none;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap');
+
+  #toto-root .screen { position:absolute; inset:0; display:none; flex-direction:column; }
+  #toto-root .screen.active { display:flex; }
+
+  /* ---------- AUTH ---------- */
+  .auth-wrap { height:100%; width:100%; background: radial-gradient(circle at 30% 15%, #4a3675, #14101f 68%); display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 26px; gap: 16px; position:relative; overflow:hidden; }
+  .auth-glow { position:absolute; width:280px; height:280px; border-radius:50%; background:radial-gradient(circle, rgba(255,138,61,0.32), transparent 70%); top:-70px; right:-70px; }
+  .auth-glow2 { position:absolute; width:220px; height:220px; border-radius:50%; background:radial-gradient(circle, rgba(123,92,255,0.35), transparent 70%); bottom:-60px; left:-60px; }
+  .logo-wrap { display:flex; flex-direction:column; align-items:center; gap:3px; margin-bottom:2px;}
+  .logo-emoji { font-size:56px; filter: drop-shadow(0 6px 14px rgba(255,140,0,0.55)); animation: floaty 3s ease-in-out infinite; }
+  .logo-title { font-size:32px; font-weight:800; color:#fff; letter-spacing:0.5px; }
+  .logo-sub { font-size:12.5px; color:#c9b8f5; }
+  .auth-card { width:100%; background: var(--panel); backdrop-filter: blur(6px); border-radius:22px; padding:22px 20px; display:flex; flex-direction:column; gap:11px; box-shadow:0 16px 40px rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.6); }
+  .auth-tabs { display:flex; background:#eee3ff; border-radius:13px; padding:4px; margin-bottom:6px; }
+  .auth-tab { flex:1; text-align:center; padding:9px 0; border-radius:10px; font-weight:800; font-size:13.5px; cursor:pointer; color:#8676ab; transition: all 0.15s; }
+  .auth-tab.active { background: var(--purple); color:#fff; box-shadow:0 4px 10px rgba(123,92,255,0.4); }
+  .field-label { font-size:10.5px; font-weight:800; color:#8676ab; margin-bottom:-4px; letter-spacing:0.3px; }
+  .field-wrap { position:relative; }
+  .field-wrap .field-icon { position:absolute; left:12px; top:50%; transform:translateY(-50%); font-size:14px; opacity:0.7; pointer-events:none; }
+  .field-wrap .field-input { padding-left:34px; }
+  .field-input { width:100%; padding:12px 12px; border-radius:12px; border:1.5px solid #e5ddf7; font-size:14px; font-family:inherit; outline:none; background:#faf8ff; transition: border-color 0.15s, box-shadow 0.15s; }
+  .field-input:focus { border-color: var(--purple); box-shadow:0 0 0 3px rgba(123,92,255,0.15); }
+  .row2 { display:flex; gap:8px; } .row2 > * { flex:1; }
+  .pill-select { display:flex; gap:8px; }
+  .pill-btn { flex:1; padding:11px 6px; border-radius:12px; border:1.5px solid #e5ddf7; text-align:center; font-weight:700; font-size:13px; cursor:pointer; background:#faf8ff; color:#8676ab; transition: all 0.15s; }
+  .pill-btn.sel { background:var(--purple); color:#fff; border-color:var(--purple); box-shadow:0 4px 10px rgba(123,92,255,0.35); }
+  .btn-primary { margin-top:4px; padding:13px; border:none; border-radius:13px; background:linear-gradient(135deg, var(--accent), #ff5f6d); color:#fff; font-weight:800; font-size:14.5px; cursor:pointer; box-shadow:0 10px 20px rgba(255,100,60,0.35); letter-spacing:0.2px; }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-google { padding:12px; border-radius:13px; border:1.5px solid #e5ddf7; background:#fff; font-weight:700; font-size:13.5px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; color:#444; transition: background 0.15s; }
+  .btn-google:active { background:#f5f2ff; }
+  .auth-error { color:#ff5470; font-size:11.5px; font-weight:700; min-height:14px; text-align:center; }
+  .divider { display:flex; align-items:center; gap:10px; color:#b3a6cf; font-size:10.5px; font-weight:700; margin: 1px 0; }
+  .divider::before, .divider::after { content:''; flex:1; height:1px; background:#e5ddf7; }
+
+  .char-wrap { height:100%; background: radial-gradient(circle at 50% 0%, #3a2b63, #120c1f 75%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; }
+  .char-title { color:#fff; font-weight:800; font-size:20px; }
+  .char-options { display:flex; gap:18px; }
+  .char-card { width:130px; padding:14px; border-radius:18px; background:var(--panel); text-align:center; cursor:pointer; border:3px solid transparent; }
+  .char-card.sel { border-color: var(--accent); transform: translateY(-4px); }
+  .char-avatar { font-size:56px; }
+  .char-name { font-weight:800; font-size:13px; margin-top:6px; }
+  .starter-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; width:100%; max-width:360px; margin-bottom:18px; }
+  .starter-card { background:var(--panel); border-radius:16px; padding:12px 6px; text-align:center; cursor:pointer; border:3px solid transparent; }
+  .starter-card.sel { border-color: var(--accent); transform:translateY(-3px); }
+  .starter-card .sp { font-size:34px; }
+  .starter-card .sp svg { width:1em; height:1.2em; vertical-align:middle; }
+  .starter-card .nm { font-weight:800; font-size:10.5px; margin-top:4px; }
+  .starter-card .nature { font-size:8.5px; color:#888; font-weight:700; text-transform:capitalize; }
+
+  .game-wrap { height:100%; display:flex; flex-direction:column; }
+  .top-hud { position:absolute; top:0; left:0; right:0; z-index:20; padding:12px 12px 0; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; }
+  .hud-chip { pointer-events:auto; background:var(--panel); border-radius:14px; padding:7px 12px; display:flex; align-items:center; gap:7px; font-weight:800; font-size:12.5px; box-shadow:0 5px 14px rgba(0,0,0,0.18); }
+  .hud-avatar { width:26px; height:26px; border-radius:50%; background:linear-gradient(135deg,#ffb86b,#ff7a7a); display:flex; align-items:center; justify-content:center; font-size:15px; }
+  .hud-stack { display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+
+  .map-view { position:relative; flex:1; overflow:hidden; background: linear-gradient(var(--sky1), var(--sky2) 45%); perspective: 1000px; perspective-origin: 50% 42%; }
+  .clouds { position:absolute; inset:0; pointer-events:none; opacity:0.85; z-index:1; }
+  .cloud { position:absolute; font-size:28px; opacity:0.9; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.05)); animation: drift linear infinite; }
+  @keyframes drift { from { transform: translateX(-40px);} to { transform: translateX(520px);} }
+
+  /* world-tilt holds ONLY the camera tilt (rotateX), independent of pan/rotate/zoom below it —
+     this keeps tilting consistent no matter which way you're facing. */
+  .world-tilt { position:absolute; inset:0; transform-style: preserve-3d; }
+  /* world is a huge ground plane (effectively infinite for normal walking distances) that
+     pans/rotates/zooms underneath the screen-fixed player. */
+  .world { position:absolute; left:50%; top:58%; width:26000px; height:26000px; transform: translate(-50%,-50%);
+    background: radial-gradient(circle at 50% 50%, var(--grass1) 0%, var(--grass2) 55%, #3fae4a 100%); }
+  #terrain-svg { position:absolute; left:0; top:0; width:26000px; height:26000px; pointer-events:none; }
+  .deco { position:absolute; pointer-events:none; }
+  .deco .counter-rot { display:inline-block; transform: translate(-50%,-100%) rotate(calc(-1 * var(--rot,0deg))); filter: drop-shadow(0 3px 2px rgba(0,0,0,0.2)); }
+  .gym-radius { position:absolute; border:2px dashed rgba(255,255,255,0.6); border-radius:50%; transform: translate(-50%,-50%); pointer-events:none; }
+  .node-shadow { position:absolute; left:50%; bottom:1px; width:26px; height:9px; border-radius:50%; background:rgba(0,20,0,0.35); transform:translateX(-50%); filter:blur(1.5px); z-index:1; }
+  .deco-shadow { position:absolute; left:50%; bottom:-1px; border-radius:50%; background:rgba(0,20,0,0.3); transform:translateX(-50%); filter:blur(1px); z-index:1; }
+
+  .player-pin { position:absolute; left:50%; top:58%; transform: translate(-50%,-100%); z-index:15; text-align:center; }
+  .player-shadow { width:26px; height:9px; border-radius:50%; background:rgba(0,0,0,0.28); margin:2px auto 0; }
+  .player-avatar { font-size:40px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); animation: bob 2.6s ease-in-out infinite; }
+  .player-avatar.walking { animation: bob 0.55s ease-in-out infinite; }
+  @keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
+
+  .toto-node, .gym-node { position:absolute; transform: translate(-50%,-100%); text-align:center; cursor:pointer; z-index:10; }
+  .node-spin { position:relative; z-index:2; transform: rotate(calc(-1 * var(--rot,0deg))); }
+  .toto-node .bubble, .gym-node .bubble { font-size:34px; animation: floaty 2.4s ease-in-out infinite; filter: drop-shadow(0 3px 4px rgba(0,0,0,0.3)); }
+  .toto-node .bubble svg, .gym-node .bubble svg { width:1em; height:1.2em; vertical-align:middle; }
+  @keyframes floaty { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-7px);} }
+  .toto-node .cp-tag { background:#222; color:#fff; font-size:9px; font-weight:800; padding:1px 6px; border-radius:8px; margin-top:2px; display:inline-block; }
+  .gym-node .gym-label { background:var(--panel); font-size:9px; font-weight:800; padding:2px 7px; border-radius:8px; margin-top:2px; display:inline-block; }
+  .dist-tag { display:block; font-size:8px; font-weight:800; color:#ffe9c2; background:rgba(0,0,0,0.5); border-radius:6px; padding:0 4px; margin-top:1px; }
+  .gym-node .dist-tag { color:#333; background:rgba(255,255,255,0.85); }
+
+  .map-controls { position:absolute; right:14px; bottom:150px; z-index:20; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .map-btn { width:42px; height:42px; border-radius:50%; background:var(--panel); border:none; font-size:17px; box-shadow:0 6px 14px rgba(0,0,0,0.25); cursor:pointer; }
+  .gps-status { position:absolute; left:14px; bottom:150px; z-index:20; background:rgba(0,0,0,0.55); color:#fff; font-size:10px; font-weight:700; padding:6px 10px; border-radius:10px; max-width:220px; line-height:1.35; }
+  .dpad { position:absolute; left:14px; bottom:195px; z-index:20; display:none; grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); gap:3px; }
+  .dpad.show { display:grid; }
+  .dpad button { border:none; border-radius:8px; background:rgba(0,0,0,0.55); color:#fff; font-size:14px; cursor:pointer; }
+  .dpad .sp { background:transparent; }
+
+  .bottom-nav { position:relative; z-index:25; display:flex; background:var(--panel); border-top:1px solid rgba(0,0,0,0.06); padding:8px 4px 10px; }
+  .nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; background:none; border:none; cursor:pointer; padding:4px 0; color:#8a8a95; font-size:10px; font-weight:800; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-icon { font-size:20px; }
+
+  .panel-screen { position:absolute; inset:0; background: linear-gradient(#fef9f2, #fdf1e4); display:none; flex-direction:column; z-index:30; }
+  .panel-screen.active { display:flex; }
+  .panel-header { padding:16px; font-weight:800; font-size:18px; display:flex; align-items:center; justify-content:space-between; background:#fff; box-shadow:0 3px 10px rgba(0,0,0,0.06); }
+  .panel-header .close-x { cursor:pointer; font-size:18px; color:#999; }
+  .panel-body { flex:1; overflow-y:auto; padding:14px; }
+
+  .toto-grid { display:grid; grid-template-columns: repeat(3,1fr); gap:10px; }
+  .toto-card { background:#fff; border-radius:14px; padding:10px 6px; text-align:center; box-shadow:0 3px 10px rgba(0,0,0,0.06); cursor:pointer; }
+  .toto-card .sp { font-size:34px; }
+  .toto-card .sp svg { width:1em; height:1.2em; vertical-align:middle; }
+  .toto-card .nm { font-weight:800; font-size:11px; margin-top:2px; }
+  .toto-card .cp { font-size:10px; color:#888; font-weight:700; }
+  .toto-card .lv { font-size:9px; color:#aaa; font-weight:700; }
+  .tier-badge { font-size:8.5px; font-weight:800; border-radius:6px; padding:1px 5px; display:inline-block; margin-top:2px; color:#fff; }
+  .tier-normal { background:#7bbf6a; } .tier-legendary{background:#4d7cff;} .tier-mythical{background:#b64dff;} .tier-eternal{background:#111; }
+
+  .shrine-row { display:flex; align-items:center; gap:12px; text-align:left; margin-bottom:8px; }
+  .shrine-row .info { flex:1; }
+  .range-tag { font-size:9.5px; font-weight:800; padding:2px 7px; border-radius:8px; }
+  .range-in { background:#defbe0; color:#1e8f3e; } .range-out { background:#ffe4e4; color:#c23a3a; }
+
+  .profile-card { background:#fff; border-radius:16px; padding:16px; display:flex; gap:12px; align-items:center; box-shadow:0 3px 10px rgba(0,0,0,0.06); }
+  .profile-card .av { font-size:44px; }
+  .stat-row { display:flex; justify-content:space-between; background:#fff; border-radius:12px; padding:11px 14px; margin-top:10px; font-weight:700; font-size:13px; box-shadow:0 3px 10px rgba(0,0,0,0.05); }
+  .btn-logout { margin-top:16px; width:100%; padding:12px; border-radius:12px; border:none; background:#ff5470; color:#fff; font-weight:800; cursor:pointer; }
+  .admin-box { margin-top:18px; border:2px dashed #b64dff; border-radius:14px; padding:12px; background:#faf4ff; }
+  .admin-title { font-weight:800; color:#7b3fd6; font-size:12.5px; margin-bottom:8px; }
+  .admin-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .admin-btn { padding:9px 4px; border-radius:10px; border:none; background:#7b5cff; color:#fff; font-weight:800; font-size:11.5px; cursor:pointer; }
+
+  .modal-back { position:absolute; inset:0; background:rgba(10,10,20,0.68); z-index:60; display:none; align-items:center; justify-content:center; padding:20px;}
+  .modal-back.active { display:flex; }
+  .modal-card { background:#fff; border-radius:20px; padding:20px; width:100%; max-width:340px; text-align:center; }
+  .modal-sp { font-size:60px; margin-bottom:2px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.25));}
+  .modal-name { font-weight:800; font-size:17px; }
+  .modal-sub { font-size:11.5px; color:#888; font-weight:700; margin-bottom:8px; }
+  .stat-list { display:flex; flex-direction:column; gap:6px; margin:10px 0; text-align:left; }
+  .stat-line { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:700; color:#666; }
+  .stat-line .lbl { width:54px; flex-shrink:0; }
+  .stat-line .bar-track { flex:1; background:#eee; border-radius:6px; height:8px; overflow:hidden; }
+  .stat-line .bar-fill { height:100%; border-radius:6px; }
+  .stat-line .val { width:36px; text-align:right; flex-shrink:0; color:#333; }
+  .btn-row { display:flex; gap:8px; margin-top:10px; }
+  .btn-catch { flex:1; padding:12px; border-radius:12px; border:none; background:linear-gradient(135deg,#ff8a3d,#ff5f6d); color:#fff; font-weight:800; cursor:pointer; }
+  .btn-cancel { flex:1; padding:12px; border-radius:12px; border:1.5px solid #ddd; background:#fff; color:#888; font-weight:800; cursor:pointer; }
+  .btn-catch:disabled { opacity:0.5; cursor:not-allowed; }
+
+  /* ---- battle setup (mode select / lobby / countdown) ---- */
+  .setup-card { background:linear-gradient(#2b1f47,#150f26); border-radius:20px; padding:22px; width:100%; max-width:340px; text-align:center; color:#fff; }
+  .setup-title { font-weight:800; font-size:17px; margin-bottom:4px; }
+  .setup-sub { font-size:11.5px; color:#c9b8f5; margin-bottom:14px; }
+  .mode-options { display:flex; gap:10px; }
+  .mode-card { flex:1; background:rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.15); border-radius:14px; padding:16px 8px; cursor:pointer; }
+  .mode-card:hover { border-color: var(--accent); }
+  .mode-card .mi { font-size:30px; }
+  .mode-card .mn { font-weight:800; font-size:12.5px; margin-top:6px; }
+  .lobby-list { display:flex; justify-content:center; gap:8px; margin:14px 0; min-height:40px; }
+  .lobby-slot { width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-size:20px; border:2px dashed rgba(255,255,255,0.25); }
+  .lobby-slot.filled { border-style:solid; border-color: var(--accent); background:rgba(255,138,61,0.2); }
+  .lobby-count { font-weight:800; font-size:13px; margin-bottom:4px; }
+  .countdown-num { font-size:56px; font-weight:800; color:var(--accent); margin:10px 0; }
+
+  /* ---- battle screen ---- */
+  .battle-back { position:absolute; inset:0; background: linear-gradient(#2b1f47, #120c1f); z-index:70; display:none; flex-direction:column; }
+  .battle-back.active { display:flex; }
+  .battle-topbar { padding:12px 14px 4px; display:flex; justify-content:space-between; align-items:center; color:#fff; }
+  .battle-title { font-weight:800; font-size:14px; }
+  .battle-retreat { background:rgba(255,255,255,0.15); border:none; color:#fff; padding:6px 12px; border-radius:10px; font-weight:700; font-size:11.5px; cursor:pointer; }
+  .battle-stage { flex:1; position:relative; margin:6px 14px; border-radius:18px; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; padding:14px; }
+  .battle-stage.theme-raid { background: radial-gradient(circle at 50% 25%, #5a3a8a, #1c1430 85%); }
+  .battle-stage.theme-catch { background: radial-gradient(circle at 50% 25%, #2f5a4a, #10241d 85%); }
+  .ember { position:absolute; bottom:-10px; font-size:12px; opacity:0.7; animation: emberRise linear infinite; pointer-events:none; }
+  @keyframes emberRise { 0%{ transform:translateY(0) translateX(0); opacity:0.8;} 100%{ transform:translateY(-380px) translateX(20px); opacity:0;} }
+  .fighter-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; position:relative; z-index:3; }
+  .fighter-card { background:rgba(255,255,255,0.95); border-radius:14px; padding:9px 10px; width:46%; }
+  .fighter-card .fname { font-weight:800; font-size:11.5px; display:flex; justify-content:space-between; }
+  .fighter-card .flevel { font-size:9px; color:#888; font-weight:700; margin-bottom:4px; }
+  .fighter-hp-track { background:#eee; border-radius:6px; height:9px; overflow:hidden; }
+  .fighter-hp-fill { height:100%; background:linear-gradient(90deg,#7bd66a,#4dbf4d); transition:width 0.2s linear; }
+  .fighter-hp-fill.enemy { background:linear-gradient(90deg,#ff5470,#ff8a3d); }
+  .fighter-nrg-track { background:#eee; border-radius:6px; height:6px; overflow:hidden; margin-top:4px; }
+  .fighter-nrg-fill { height:100%; background:linear-gradient(90deg,#4d7cff,#7b5cff); transition:width 0.2s linear; }
+  .arena-mid { flex:1; display:flex; align-items:center; justify-content:space-between; padding:6px 10px; position:relative; z-index:2; }
+  .sprite-wrap { position:relative; display:flex; flex-direction:column; align-items:center; }
+  .sprite-glow { position:absolute; width:70px; height:24px; border-radius:50%; bottom:-6px; filter:blur(4px); }
+  .sprite-glow.player { background:rgba(120,220,120,0.55); }
+  .sprite-glow.enemy { background:rgba(255,90,90,0.5); }
+  .arena-sprite { font-size:72px; filter: drop-shadow(0 8px 8px rgba(0,0,0,0.4)); position:relative; z-index:2; }
+  .arena-sprite svg, .modal-sp svg { width:1em; height:1.2em; vertical-align:middle; }
+  .arena-sprite.player { animation: floaty 2s ease-in-out infinite; }
+  .arena-sprite.enemy { animation: floaty 2.3s ease-in-out infinite reverse; }
+  .arena-sprite.hit { animation: hitflash 0.25s; }
+  @keyframes hitflash { 0%{filter:brightness(2) drop-shadow(0 8px 8px rgba(0,0,0,0.4));} 100%{filter:brightness(1) drop-shadow(0 8px 8px rgba(0,0,0,0.4));} }
+  .dmg-pop { position:absolute; font-weight:900; font-size:18px; pointer-events:none; animation: dmgFloat 0.7s ease-out forwards; z-index:5; }
+  @keyframes dmgFloat { 0%{ transform:translateY(0); opacity:1; } 100%{ transform:translateY(-38px); opacity:0; } }
+  .vs-badge { color:#fff; font-weight:800; font-size:13px; opacity:0.6; position:relative; z-index:2; }
+  .ally-row { display:flex; gap:8px; justify-content:center; padding:4px 0; min-height:0; position:relative; z-index:3; }
+  .ally-chip { background:rgba(255,255,255,0.85); border-radius:10px; padding:4px 7px; display:flex; align-items:center; gap:5px; font-size:10px; font-weight:800; }
+  .ally-chip .as { font-size:16px; }
+  .ally-hp-track { width:34px; background:#eee; border-radius:5px; height:5px; overflow:hidden; }
+  .ally-hp-fill { height:100%; background:#4dbf4d; }
+  .battle-log { color:#ffd9a0; font-size:11px; font-weight:700; text-align:center; min-height:16px; position:relative; z-index:3; }
+  .battle-controls { padding:12px 14px 16px; display:flex; gap:8px; }
+  .btn-attack { flex:1; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#ff3b5c,#ff8a3d); color:#fff; font-weight:900; font-size:15px; cursor:pointer; }
+  .btn-attack:active { transform: scale(0.96); }
+  .btn-swap { padding:16px 12px; border-radius:14px; border:none; background:rgba(255,255,255,0.15); color:#fff; font-weight:800; font-size:11.5px; cursor:pointer; }
+
+  .toni-glow { filter: drop-shadow(0 0 10px rgba(255,30,30,0.85)) drop-shadow(0 0 22px rgba(255,0,0,0.6)); animation: toniPulse 1.5s ease-in-out infinite; }
+  /* shared animation for every standing creature's body parts */
+  .cr-eye { animation: crEyeGlow 1.8s ease-in-out infinite; transform-origin: center; }
+  @keyframes crEyeGlow { 0%,100%{ opacity:1; } 50%{ opacity:0.55; } }
+  .cr-legL { animation: crLegL 1.1s ease-in-out infinite; transform-origin: 35px 92px; }
+  .cr-legR { animation: crLegR 1.1s ease-in-out infinite; transform-origin: 65px 92px; }
+  @keyframes crLegL { 0%,100%{ transform:rotate(0deg);} 50%{ transform:rotate(-10deg);} }
+  @keyframes crLegR { 0%,100%{ transform:rotate(0deg);} 50%{ transform:rotate(10deg);} }
+  .cr-armL { animation: crArmL 1.6s ease-in-out infinite; transform-origin: 21px 62px; }
+  .cr-armR { animation: crArmR 1.6s ease-in-out infinite; transform-origin: 79px 62px; }
+  @keyframes crArmL { 0%,100%{ transform:rotate(0deg);} 50%{ transform:rotate(-8deg);} }
+  @keyframes crArmR { 0%,100%{ transform:rotate(0deg);} 50%{ transform:rotate(8deg);} }
+  .cr-ghost { animation: crGhostSway 2.2s ease-in-out infinite; transform-origin: center; }
+  @keyframes crGhostSway { 0%,100%{ transform:translateX(0) scaleY(1);} 50%{ transform:translateX(2px) scaleY(1.03);} }
+  @keyframes toniPulse { 0%,100%{ filter: drop-shadow(0 0 8px rgba(255,30,30,0.75)) drop-shadow(0 0 16px rgba(255,0,0,0.5)); } 50%{ filter: drop-shadow(0 0 16px rgba(255,20,20,1)) drop-shadow(0 0 32px rgba(255,0,0,0.85)); } }
+  .toast { position:absolute; bottom:96px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:8px 16px; border-radius:20px; font-size:12.5px; font-weight:700; z-index:80; opacity:0; transition:opacity 0.25s; pointer-events:none;}
+  .toast.show { opacity:1; }
+</style>
+
+<div id="toto-root">
+
+  <!-- AUTH SCREEN -->
+  <div class="screen active" data-screen="auth">
+    <div class="auth-wrap">
+      <div class="auth-glow"></div>
+      <div class="auth-glow2"></div>
+      <div class="logo-wrap">
+        <div class="logo-emoji">🎃</div>
+        <div class="logo-title">TotoQuest</div>
+        <div class="logo-sub">a haunted world, waiting outside your door</div>
+      </div>
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <div class="auth-tab active" id="tab-login">Log In</div>
+          <div class="auth-tab" id="tab-register">Register</div>
+        </div>
+        <div id="login-fields">
+          <div class="field-label">EMAIL</div>
+          <div class="field-wrap"><span class="field-icon">✉️</span><input class="field-input" id="login-email" placeholder="you@example.com" /></div>
+          <div class="field-label">PASSWORD</div>
+          <div class="field-wrap"><span class="field-icon">🔒</span><input class="field-input" id="login-password" type="password" placeholder="••••••••" /></div>
+          <div class="auth-error" id="login-error"></div>
+          <button class="btn-primary" id="btn-login">Log In</button>
+          <div class="divider">or</div>
+          <button class="btn-google" id="btn-google-login">🟢 Continue with Google</button>
+        </div>
+        <div id="register-fields" style="display:none;">
+          <div class="field-label">USERNAME</div>
+          <div class="field-wrap"><span class="field-icon">🧙</span><input class="field-input" id="reg-username" placeholder="TrainerName" /></div>
+          <div class="field-label">EMAIL</div>
+          <div class="field-wrap"><span class="field-icon">✉️</span><input class="field-input" id="reg-email" placeholder="you@example.com" /></div>
+          <div class="field-label">PASSWORD</div>
+          <div class="field-wrap"><span class="field-icon">🔒</span><input class="field-input" id="reg-password" type="password" placeholder="••••••••" /></div>
+          <div class="row2">
+            <div style="flex:1.4;">
+              <div class="field-label">GENDER</div>
+              <div class="pill-select" id="gender-select">
+                <div class="pill-btn sel" data-g="female">Female</div>
+                <div class="pill-btn" data-g="male">Male</div>
+              </div>
+            </div>
+            <div>
+              <div class="field-label">AGE</div>
+              <div class="field-wrap"><input class="field-input" style="padding-left:12px;" id="reg-age" type="number" min="8" max="99" placeholder="24" /></div>
+            </div>
+          </div>
+          <div class="auth-error" id="reg-error"></div>
+          <button class="btn-primary" id="btn-register">Create Account</button>
+          <div class="divider">or</div>
+          <button class="btn-google" id="btn-google-register">🟢 Sign up with Google</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARACTER SELECT -->
+  <div class="screen" data-screen="char">
+    <div class="char-wrap">
+      <div class="char-title">Choose your look</div>
+      <div class="char-options">
+        <div class="char-card sel" data-av="female" id="card-female"><div class="char-avatar">🧙‍♀️</div><div class="char-name">Female Trainer</div></div>
+        <div class="char-card" data-av="male" id="card-male"><div class="char-avatar">🧙‍♂️</div><div class="char-name">Male Trainer</div></div>
+      </div>
+      <button class="btn-primary" style="width:100%;" id="btn-enter-world">Enter TotoQuest →</button>
+    </div>
+  </div>
+
+  <!-- STARTER SELECT (new accounts only) -->
+  <div class="screen" data-screen="starter">
+    <div class="char-wrap" style="justify-content:flex-start; padding-top:40px; overflow-y:auto;">
+      <div class="char-title">Pick your starting Toto</div>
+      <div class="logo-sub" style="margin-bottom:6px;">One per nature — you can catch every kind later</div>
+      <div class="starter-grid" id="starter-grid"></div>
+      <button class="btn-primary" style="width:100%; max-width:360px;" id="btn-confirm-starter">Confirm →</button>
+    </div>
+  </div>
+
+  <!-- MAIN GAME -->
+  <div class="screen" data-screen="game">
+    <div class="game-wrap">
+      <div class="top-hud">
+        <div class="hud-chip"><span class="hud-avatar" id="hud-avatar">🧙‍♀️</span><span id="hud-name">Trainer</span></div>
+        <div class="hud-stack">
+          <div class="hud-chip">⚡ <span id="hud-energy">100</span></div>
+          <div class="hud-chip">📍 <span id="hud-nearby">0</span> nearby</div>
+          <button class="hud-chip" id="btn-leaderboard" style="border:none; cursor:pointer;">🏆 Leaderboard</button>
+        </div>
+      </div>
+
+      <div class="map-view" id="map-view">
+        <div class="clouds" id="clouds"></div>
+        <div class="world-tilt" id="world-tilt">
+          <div class="world" id="world">
+            <svg id="terrain-svg" viewBox="0 0 26000 26000"></svg>
+            <div id="deco-layer"></div>
+            <div id="toto-layer"></div>
+            <div id="gym-layer"></div>
+          </div>
+        </div>
+        <div class="player-pin">
+          <div class="player-avatar" id="player-avatar">🧙‍♀️</div>
+          <div class="player-shadow"></div>
+        </div>
+
+        <div class="map-controls">
+          <button class="map-btn" id="btn-zoom-in" title="Zoom in">➕</button>
+          <button class="map-btn" id="btn-zoom-out" title="Zoom out">➖</button>
+          <button class="map-btn" id="btn-rotate-l" title="Rotate left">↺</button>
+          <button class="map-btn" id="btn-rotate-r" title="Rotate right">↻</button>
+          <button class="map-btn" id="btn-locate" title="Re-center on GPS">🧭</button>
+          <button class="map-btn" id="btn-simulate" title="Test walking (no real GPS needed)">🕹️</button>
+        </div>
+        <div class="dpad" id="dpad">
+          <span class="sp"></span><button data-dir="n">▲</button><span class="sp"></span>
+          <button data-dir="w">◀</button><span class="sp">🚶</span><button data-dir="e">▶</button>
+          <span class="sp"></span><button data-dir="s">▼</button><span class="sp"></span>
+        </div>
+
+        <div class="gps-status" id="gps-status">GPS: locating…</div>
+        <div class="toast" id="toast"></div>
+      </div>
+
+      <div class="bottom-nav">
+        <button class="nav-btn active" data-tab="map"><span class="nav-icon">🗺️</span>Map</button>
+        <button class="nav-btn" data-tab="totos"><span class="nav-icon">🎃</span>Totos</button>
+        <button class="nav-btn" data-tab="battle"><span class="nav-icon">⚔️</span>Battle</button>
+        <button class="nav-btn" data-tab="challenger"><span class="nav-icon">🕯️</span>Challenger</button>
+        <button class="nav-btn" data-tab="profile"><span class="nav-icon">👤</span>Profile</button>
+      </div>
+    </div>
+
+    <div class="panel-screen" data-panel="totos">
+      <div class="panel-header">Your Totos <span class="close-x" data-close>✕</span></div>
+      <div class="panel-body"><div class="toto-grid" id="toto-collection"></div></div>
+    </div>
+
+    <div class="panel-screen" data-panel="battle">
+      <div class="panel-header">Gym Battles Near You <span class="close-x" data-close>✕</span></div>
+      <div class="panel-body">
+        <p style="font-weight:700; color:#777; font-size:12px; margin-bottom:10px;">Legendary and Mythical Totos guard these gyms nearby. Get within range to battle — solo or with a group.</p>
+        <div id="battle-shrine-list"></div>
+      </div>
+    </div>
+
+    <div class="panel-screen" data-panel="challenger">
+      <div class="panel-header">Challenger Shrines <span class="close-x" data-close>✕</span></div>
+      <div class="panel-body">
+        <p style="font-weight:700; color:#777; font-size:12.5px; margin-bottom:10px;">Eternal Totos (20,000 CP) guard these shrines — always ready to battle from anywhere, no walking required.</p>
+        <div id="challenger-list"></div>
+      </div>
+    </div>
+
+    <div class="panel-screen" data-panel="profile">
+      <div class="panel-header">Profile <span class="close-x" data-close>✕</span></div>
+      <div class="panel-body">
+        <div class="profile-card">
+          <div class="av" id="profile-avatar">🧙‍♀️</div>
+          <div><div style="font-weight:800; font-size:16px;" id="profile-name">Trainer</div><div style="font-size:12px; color:#888;" id="profile-email">email</div></div>
+        </div>
+        <div class="stat-row"><span>Energy</span><span id="profile-energy">100</span></div>
+        <div class="stat-row"><span>Power Level</span><span id="profile-power" style="color:#ff8a3d;">0</span></div>
+        <div class="stat-row"><span>Totos caught</span><span id="profile-count">0</span></div>
+        <div class="stat-row"><span>Gender</span><span id="profile-gender">-</span></div>
+        <div class="stat-row"><span>Age</span><span id="profile-age">-</span></div>
+        <div id="admin-panel" style="display:none;">
+          <div class="admin-box">
+            <div class="admin-title">🛠️ ADMIN TOOLS (TyeMax)</div>
+            <div class="admin-grid">
+              <button class="admin-btn" data-give="normal">+ Normal Toto</button>
+              <button class="admin-btn" data-give="legendary">+ Legendary Toto</button>
+              <button class="admin-btn" data-give="mythical">+ Mythical Toto</button>
+              <button class="admin-btn" data-give="eternal">+ Eternal Toto</button>
+            </div>
+            <button class="admin-btn" style="width:100%; margin-top:8px; background:#ff8a3d;" id="btn-admin-energy">⚡ +1,000,000 Energy</button>
+          </div>
+        </div>
+        <button class="btn-logout" id="btn-logout">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOTO DETAIL / POWER UP MODAL -->
+  <div class="modal-back" id="detail-modal">
+    <div class="modal-card">
+      <div class="modal-sp" id="det-sprite">👻</div>
+      <div class="modal-name" id="det-name">Wisp</div>
+      <div class="modal-sub" id="det-sub">Lv.1 · CP 320 · normal</div>
+      <div class="stat-list" id="det-stats"></div>
+      <div class="auth-error" id="det-msg" style="text-align:center;"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" data-close-det>Close</button>
+        <button class="btn-catch" id="btn-power-up">⚡ Power Up</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WILD ENCOUNTER (throw to catch, always succeeds) -->
+  <div class="modal-back" id="encounter-modal">
+    <div class="modal-card">
+      <div class="modal-sp" id="enc-sprite">👻</div>
+      <div class="modal-name" id="enc-name">Wisp</div>
+      <div class="modal-sub" id="enc-sub">CP 320 · normal</div>
+      <div class="btn-row">
+        <button class="btn-cancel" data-close-enc>Run</button>
+        <button class="btn-catch" id="btn-throw">🔮 Throw</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="modal-back" id="leaderboard-modal">
+    <div class="modal-card" style="max-width:360px; text-align:left;">
+      <div class="modal-name" style="text-align:center; margin-bottom:2px;">🏆 Power Leaderboard</div>
+      <div class="modal-sub" style="text-align:center;">Ranked by your strongest 6 Totos' combined CP</div>
+      <div id="leaderboard-list" style="max-height:340px; overflow-y:auto; margin-top:8px;"></div>
+      <button class="btn-cancel" style="width:100%; margin-top:10px;" data-close-leaderboard>Close</button>
+    </div>
+  </div>
+
+  <!-- BATTLE SETUP (proximity already checked before opening) -->
+  <div class="modal-back" id="setup-modal">
+    <div class="setup-card" id="setup-card"></div>
+  </div>
+
+  <!-- BATTLE SCREEN -->
+  <div class="battle-back" id="battle-screen">
+    <div class="battle-topbar">
+      <div class="battle-title" id="battle-title">Wild Encounter</div>
+      <button class="battle-retreat" id="btn-retreat">Retreat</button>
+    </div>
+    <div class="battle-stage theme-catch" id="battle-stage">
+      <div class="fighter-row">
+        <div class="fighter-card">
+          <div class="fname"><span id="bf-p-name">Your Toto</span><span id="bf-p-cp">CP 0</span></div>
+          <div class="flevel" id="bf-p-level">Lv.1</div>
+          <div class="fighter-hp-track"><div class="fighter-hp-fill" id="bf-p-hp" style="width:100%;"></div></div>
+          <div class="fighter-nrg-track"><div class="fighter-nrg-fill" id="bf-p-nrg" style="width:100%;"></div></div>
+        </div>
+        <div class="fighter-card">
+          <div class="fname"><span id="bf-e-name">Enemy</span><span id="bf-e-cp">CP 0</span></div>
+          <div class="flevel" id="bf-e-level">wild</div>
+          <div class="fighter-hp-track"><div class="fighter-hp-fill enemy" id="bf-e-hp" style="width:100%;"></div></div>
+        </div>
+      </div>
+      <div class="arena-mid" id="arena-mid">
+        <div class="sprite-wrap"><div class="sprite-glow player"></div><div class="arena-sprite player" id="bf-p-sprite">👻</div></div>
+        <div class="vs-badge">VS</div>
+        <div class="sprite-wrap"><div class="sprite-glow enemy"></div><div class="arena-sprite enemy" id="bf-e-sprite">🎃</div></div>
+      </div>
+      <div class="ally-row" id="ally-row"></div>
+      <div class="battle-log" id="battle-log">Tap ATTACK to fight!</div>
+    </div>
+    <div class="battle-controls">
+      <button class="btn-swap" id="btn-swap-toto">🔁 Swap</button>
+      <button class="btn-attack" id="btn-attack">⚔️ ATTACK!</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  const ADMIN_EMAIL = "tyeandmaxgates@gmail.com";
+  const root = document.getElementById('toto-root');
+  const $ = (sel, ctx) => (ctx||root).querySelector(sel);
+  const $$ = (sel, ctx) => Array.from((ctx||root).querySelectorAll(sel));
+
+  const SPECIES = {
+    grass:[["Vine Wraith","🌿"],["Bramble Ghoul","🥀"]], water:[["Drowned Specter","🌊"],["Tide Phantom","💧"]],
+    fire:[["Will-o-Wisp","🔥"],["Ember Phantom","🕯️"]], ice:[["Frost Wight","❄️"],["Rime Ghost","🧊"]],
+    stone:[["Gargoyle Pup","🗿"],["Cairn Stalker","⛰️"]], electric:[["Static Poltergeist","⚡"],["Storm Wraith","🌩️"]],
+    wood:[["Hollow Treant","🌲"],["Rootbound Ghast","🍂"]],
+    spooky:[["Pumpkin Fiend","🎃"],["Grave Wisp","👻"],["Bone Rattler","💀"],["Web Stalker","🕷️"],["Night Bat","🦇"]]
+  };
+  const ELEMENTS = Object.keys(SPECIES);
+  const STARTER_NATURES = ELEMENTS.filter(e=>e!=='spooky');
+  const TIER_CAP = {normal:1500, legendary:3500, mythical:6500, eternal:20000};
+  const WORLD_CENTER = 13000;
+  const GPS_SCALE = 3.2;
+  const CHUNK_SIZE_M = 350;   // each real-map data fetch covers one chunk
+  const GYM_RADIUS_M = 3;     // ~10 feet
+  const WILD_RADIUS_M = 3;    // ~10 feet
+  const DEFAULT_LAT = 42.9587, DEFAULT_LON = -83.8394; // Swartz Creek, MI — used only if real GPS can't be reached
+  const ZOOM_MIN = 0.6, ZOOM_MAX = 1.9, TILT_MAX = 58;
+
+  // ---------------- CREATURE ART (original designs — standing bodies, not flat emoji) ----------------
+  function standingCreature(c){
+    return '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
+      + '<ellipse cx="50" cy="105" rx="27" ry="5" fill="rgba(0,0,0,0.22)"/>'
+      + '<ellipse cx="35" cy="97" rx="9" ry="6" fill="'+c.leg+'" class="cr-leg cr-legL"/>'
+      + '<ellipse cx="65" cy="97" rx="9" ry="6" fill="'+c.leg+'" class="cr-leg cr-legR"/>'
+      + '<ellipse cx="50" cy="74" rx="25" ry="23" fill="'+c.body+'" stroke="'+c.stroke+'" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="87" rx="21" ry="9" fill="#000" opacity="0.1"/>'
+      + '<ellipse cx="21" cy="70" rx="7" ry="10" fill="'+c.body+'" stroke="'+c.stroke+'" stroke-width="2" class="cr-arm cr-armL"/>'
+      + '<ellipse cx="79" cy="70" rx="7" ry="10" fill="'+c.body+'" stroke="'+c.stroke+'" stroke-width="2" class="cr-arm cr-armR"/>'
+      + '<circle cx="50" cy="35" r="26" fill="'+c.head+'" stroke="'+c.stroke+'" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="47" rx="19" ry="7" fill="#000" opacity="0.08"/>'
+      + c.accent
+      + '<circle class="cr-eye" cx="41" cy="33" r="5" fill="'+c.eye+'"/>'
+      + '<circle class="cr-eye" cx="59" cy="33" r="5" fill="'+c.eye+'"/>'
+      + '<path d="M43,45 Q50,50 57,45" stroke="'+c.stroke+'" stroke-width="2.2" fill="none" stroke-linecap="round"/>'
+      + '<ellipse cx="38" cy="21" rx="11" ry="7" fill="#fff" opacity="0.35" transform="rotate(-20 38 21)"/>'
+      + '</svg>';
+  }
+  const NATURE_SVG = {
+    grass: standingCreature({ body:'#6fbf5a', head:'#8fd67a', leg:'#4a8f3a', stroke:'#2e5c24', eye:'#fff7d6',
+      accent:'<path d="M50,3 Q39,15 50,25 Q61,15 50,3 Z" fill="#3fae4a" stroke="#2e5c24" stroke-width="1.5"/>' }),
+    water: standingCreature({ body:'#4fa8e6', head:'#7cc6f2', leg:'#2f7bb8', stroke:'#1c4a6b', eye:'#fff7d6',
+      accent:'<path d="M50,2 C59,14 59,23 50,26 C41,23 41,14 50,2 Z" fill="#a8def2" stroke="#1c4a6b" stroke-width="1.5"/>' }),
+    fire: standingCreature({ body:'#ff8a3d', head:'#ffb15c', leg:'#d9631f', stroke:'#8a3a10', eye:'#fffbe0',
+      accent:'<path d="M50,2 C57,10 59,19 50,26 C41,19 43,10 50,2 Z" fill="#ffd35c" stroke="#8a3a10" stroke-width="1.5"/>' }),
+    ice: standingCreature({ body:'#bfe8ff', head:'#e0f6ff', leg:'#8fd0ec', stroke:'#4a8aa8', eye:'#1c4a5c',
+      accent:'<polygon points="50,2 57,15 50,26 43,15" fill="#eaffff" stroke="#4a8aa8" stroke-width="1.5"/>' }),
+    stone: standingCreature({ body:'#a8a8a8', head:'#c2c2c2', leg:'#7a7a7a', stroke:'#4a4a4a', eye:'#fff2c2',
+      accent:'<circle cx="43" cy="9" r="5" fill="#8a8a8a" stroke="#4a4a4a" stroke-width="1"/><circle cx="57" cy="7" r="6" fill="#949494" stroke="#4a4a4a" stroke-width="1"/>' }),
+    electric: standingCreature({ body:'#ffe066', head:'#fff2a3', leg:'#e0b800', stroke:'#8a6f00', eye:'#3a2c00',
+      accent:'<polygon points="54,2 44,15 50,15 46,26 59,11 52,11" fill="#fff7c2" stroke="#8a6f00" stroke-width="1.2"/>' }),
+    wood: standingCreature({ body:'#8a6a4a', head:'#a8835c', leg:'#5c452f', stroke:'#3a2a1c', eye:'#fff2c2',
+      accent:'<line x1="50" y1="2" x2="50" y2="15" stroke="#3a2a1c" stroke-width="3"/><circle cx="45" cy="7" r="4" fill="#4fae4a"/><circle cx="55" cy="7" r="4" fill="#4fae4a"/>' })
+  };
+  const SPOOKY_SVG = {
+    'Pumpkin Fiend': '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
+      + '<ellipse cx="50" cy="105" rx="27" ry="5" fill="rgba(0,0,0,0.22)"/>'
+      + '<ellipse cx="35" cy="97" rx="9" ry="6" fill="#3a5c2e" class="cr-leg cr-legL"/>'
+      + '<ellipse cx="65" cy="97" rx="9" ry="6" fill="#3a5c2e" class="cr-leg cr-legR"/>'
+      + '<ellipse cx="50" cy="74" rx="25" ry="23" fill="#5c8a4a" stroke="#2e5c24" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="87" rx="21" ry="9" fill="#000" opacity="0.1"/>'
+      + '<ellipse cx="21" cy="70" rx="7" ry="10" fill="#5c8a4a" stroke="#2e5c24" stroke-width="2" class="cr-arm cr-armL"/>'
+      + '<ellipse cx="79" cy="70" rx="7" ry="10" fill="#5c8a4a" stroke="#2e5c24" stroke-width="2" class="cr-arm cr-armR"/>'
+      + '<line x1="50" y1="9" x2="50" y2="2" stroke="#3a5c2e" stroke-width="3"/>'
+      + '<circle cx="50" cy="35" r="26" fill="#ff8a3d" stroke="#8a3a10" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="47" rx="19" ry="7" fill="#000" opacity="0.08"/>'
+      + '<path d="M32,32 Q50,25 68,32" stroke="#b85a1e" stroke-width="1.5" fill="none" opacity="0.5"/>'
+      + '<path d="M32,38 Q50,44 68,38" stroke="#b85a1e" stroke-width="1.5" fill="none" opacity="0.5"/>'
+      + '<path class="cr-eye" d="M36,29 L45,27 L40,39 Z" fill="#fff2b0"/>'
+      + '<path class="cr-eye" d="M64,29 L55,27 L60,39 Z" fill="#fff2b0"/>'
+      + '<path d="M38,45 L44,49 L48,44 L52,49 L56,44 L62,45" stroke="#fff2b0" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+      + '<ellipse cx="38" cy="21" rx="11" ry="7" fill="#fff" opacity="0.3" transform="rotate(-20 38 21)"/>'
+      + '</svg>',
+    'Grave Wisp': '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
+      + '<ellipse cx="50" cy="103" rx="24" ry="5" fill="rgba(0,0,0,0.18)"/>'
+      + '<path d="M22,60 Q20,20 50,18 Q80,20 78,60 L78,95 L68,86 L58,97 L50,87 L42,97 L32,86 L22,95 Z" fill="#f4f4fb" stroke="#c9c9de" stroke-width="2.5" class="cr-ghost"/>'
+      + '<ellipse cx="50" cy="70" rx="18" ry="16" fill="#000" opacity="0.05"/>'
+      + '<circle class="cr-eye" cx="40" cy="50" r="5" fill="#2a2a3a"/><circle class="cr-eye" cx="60" cy="50" r="5" fill="#2a2a3a"/>'
+      + '<ellipse cx="50" cy="64" rx="5" ry="7" fill="#2a2a3a"/>'
+      + '<ellipse cx="38" cy="32" rx="10" ry="6" fill="#fff" opacity="0.5" transform="rotate(-15 38 32)"/>'
+      + '</svg>',
+    'Bone Rattler': standingCreature({ body:'#f2f2e8', head:'#f7f7ee', leg:'#d8d8c8', stroke:'#8a8a78', eye:'#ff5040',
+      accent:'<path d="M38,20 L38,30 M46,18 L46,32 M54,18 L54,32 M62,20 L62,30" stroke="#8a8a78" stroke-width="2" stroke-linecap="round"/>' }),
+    'Web Stalker': '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
+      + '<ellipse cx="50" cy="99" rx="30" ry="5" fill="rgba(0,0,0,0.2)"/>'
+      + '<g class="cr-legL" stroke="#2a2030" stroke-width="3" fill="none" stroke-linecap="round">'
+      + '<path d="M38,60 L14,50 M38,66 L10,66 M38,72 L14,82 M38,78 L20,94"/></g>'
+      + '<g class="cr-legR" stroke="#2a2030" stroke-width="3" fill="none" stroke-linecap="round">'
+      + '<path d="M62,60 L86,50 M62,66 L90,66 M62,72 L86,82 M62,78 L80,94"/></g>'
+      + '<circle cx="50" cy="66" r="26" fill="#4a2f6b" stroke="#2a1a44" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="78" rx="20" ry="8" fill="#000" opacity="0.12"/>'
+      + '<circle class="cr-eye" cx="42" cy="60" r="4.5" fill="#ff4040"/><circle class="cr-eye" cx="58" cy="60" r="4.5" fill="#ff4040"/>'
+      + '<circle class="cr-eye" cx="46" cy="70" r="3" fill="#ff4040"/><circle class="cr-eye" cx="54" cy="70" r="3" fill="#ff4040"/>'
+      + '<ellipse cx="40" cy="55" rx="9" ry="6" fill="#fff" opacity="0.25" transform="rotate(-20 40 55)"/>'
+      + '</svg>',
+    'Night Bat': '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
+      + '<ellipse cx="50" cy="90" rx="20" ry="5" fill="rgba(0,0,0,0.18)"/>'
+      + '<g class="toni-wing toni-wing-l"><path d="M45,55 C25,40 8,44 4,58 C14,56 26,60 38,68 Z" fill="#3c2a52" stroke="#241a35" stroke-width="2"/></g>'
+      + '<g class="toni-wing toni-wing-r"><path d="M55,55 C75,40 92,44 96,58 C86,56 74,60 62,68 Z" fill="#3c2a52" stroke="#241a35" stroke-width="2"/></g>'
+      + '<circle cx="50" cy="58" r="24" fill="#5c4373" stroke="#241a35" stroke-width="2.5"/>'
+      + '<ellipse cx="50" cy="68" rx="18" ry="7" fill="#000" opacity="0.1"/>'
+      + '<path d="M38,38 L34,26 L44,36 Z" fill="#5c4373" stroke="#241a35" stroke-width="2"/><path d="M62,38 L66,26 L56,36 Z" fill="#5c4373" stroke="#241a35" stroke-width="2"/>'
+      + '<circle class="cr-eye" cx="42" cy="56" r="5" fill="#ff4040"/><circle class="cr-eye" cx="58" cy="56" r="5" fill="#ff4040"/>'
+      + '<ellipse cx="40" cy="48" rx="9" ry="6" fill="#fff" opacity="0.3" transform="rotate(-20 40 48)"/>'
+      + '</svg>'
+  };
+  function rand(seed){ const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+  function uid(){ return 'id'+Date.now()+Math.floor(Math.random()*100000); }
+  function rollCP(tier){
+    if (tier==='normal') return Math.floor(1 + Math.random()*1499);
+    if (tier==='legendary') return Math.floor(1500 + Math.random()*2000);
+    if (tier==='mythical') return Math.floor(3500 + Math.random()*3000);
+    if (tier==='eternal') return 20000;
+  }
+  function statsFromCp(cp){
+    return { maxHp:Math.round(50+cp*0.18), atk:Math.round(10+cp*0.05), strength:Math.round(8+cp*0.045), def:Math.round(8+cp*0.04), spd:Math.round(20+cp*0.01), maxEnergy:Math.round(40+cp*0.02) };
+  }
+  function makeToto(tier){
+    const spooky = Math.random() < 0.4 || tier==='eternal';
+    let name, sprite, emoji;
+    if (spooky){
+      const pool = SPECIES.spooky;
+      [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
+      sprite = SPOOKY_SVG[name] || emoji;
+    } else {
+      const nature = ELEMENTS[Math.floor(Math.random()*7)];
+      const pool = SPECIES[nature];
+      [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
+      sprite = NATURE_SVG[nature];
+    }
+    const cp = rollCP(tier); const s = statsFromCp(cp);
+    return { id:uid(), name, sprite, tier, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
+  }
+  // Toni — a custom Eternal, always guarding the first Challenger shrine so she's easy to find.
+  // Original artwork (not the reference photo) — a small animated inline SVG so she reads
+  // clearly at any size, with fluttering wings, glowing eyes, and a pulsing staff orb.
+  const TONI_SVG = '<svg class="toni-svg" viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">'
+    + '<ellipse cx="50" cy="113" rx="26" ry="5" fill="rgba(0,0,0,0.25)"/>'
+    + '<g class="toni-wing toni-wing-l"><path d="M40,55 C20,38 4,44 2,60 C10,57 21,61 31,70 C35,64 38,59 40,55 Z" fill="#4a2f6b" stroke="#2c1a44" stroke-width="2"/><circle cx="15" cy="55" r="4" fill="#eaffea" opacity="0.85"/></g>'
+    + '<g class="toni-wing toni-wing-r"><path d="M60,55 C80,38 96,44 98,60 C90,57 79,61 69,70 C65,64 62,59 60,55 Z" fill="#4a2f6b" stroke="#2c1a44" stroke-width="2"/><circle cx="85" cy="55" r="4" fill="#eaffea" opacity="0.85"/></g>'
+    + '<path d="M35,78 C32,96 33,109 40,116 L60,116 C67,109 68,96 65,78 Z" fill="#3c2a52" stroke="#241a35" stroke-width="2"/>'
+    + '<ellipse cx="50" cy="100" rx="15" ry="10" fill="#000" opacity="0.12"/>'
+    + '<line x1="21" y1="116" x2="29" y2="58" stroke="#6b4a2f" stroke-width="3" stroke-linecap="round"/>'
+    + '<circle class="toni-orb" cx="29" cy="53" r="6" fill="#9b5cff"/>'
+    + '<ellipse cx="50" cy="55" rx="26" ry="23" fill="#ff8a3d" stroke="#b85a1e" stroke-width="2.5"/>'
+    + '<ellipse cx="50" cy="67" rx="20" ry="7" fill="#000" opacity="0.1"/>'
+    + '<path d="M32,55 Q50,47 68,55" stroke="#b85a1e" stroke-width="1.5" fill="none" opacity="0.5"/>'
+    + '<path d="M32,57 Q50,65 68,57" stroke="#b85a1e" stroke-width="1.5" fill="none" opacity="0.5"/>'
+    + '<path class="toni-eye" d="M36,51 L45,49 L40,59 Z" fill="#fff2b0"/>'
+    + '<path class="toni-eye" d="M64,51 L55,49 L60,59 Z" fill="#fff2b0"/>'
+    + '<path d="M34,65 L40,69 L44,64 L50,70 L56,64 L60,69 L66,65" stroke="#fff2b0" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path d="M50,8 L29,45 Q50,39 71,45 Z" fill="#6b3fa0" stroke="#442868" stroke-width="2.5"/>'
+    + '<ellipse cx="50" cy="45" rx="23" ry="5" fill="#6b3fa0" stroke="#442868" stroke-width="2.5"/>'
+    + '<circle cx="50" cy="9" r="4.5" fill="#ff8a3d" stroke="#b85a1e" stroke-width="1.5"/>'
+    + '<ellipse cx="40" cy="46" rx="9" ry="6" fill="#fff" opacity="0.3" transform="rotate(-20 40 46)"/>'
+    + '</svg>';
+  function spriteMarkup(t){ return (t && t.isToni) ? TONI_SVG : (t ? t.sprite : ''); }
+  function makeToniGuardian(){
+    const cp = 20000; const s = statsFromCp(cp);
+    return { id:uid(), name:'Toni', sprite:'🎃', tier:'eternal', level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy, isToni:true };
+  }
+  function powerUpCost(t){ return Math.round(150 + t.cp*0.55); }
+  function applyPowerUp(t){
+    const cap = TIER_CAP[t.tier]; if (t.cp >= cap) return false;
+    const step = Math.max(25, Math.round((cap - t.cp) * 0.18));
+    t.cp = Math.min(cap, t.cp + step); t.level += 1;
+    const s = statsFromCp(t.cp);
+    t.maxHp=s.maxHp; t.hp=s.maxHp; t.atk=s.atk; t.strength=s.strength; t.def=s.def; t.spd=s.spd; t.maxEnergy=s.maxEnergy; t.energy=s.maxEnergy;
+    return true;
+  }
+
+  // ---------------- STATE ----------------
+  let state = {
+    loggedIn:false, username:'', email:'', gender:'female', age:'',
+    avatar:'female', energy:100, collection:[], geo:null, activeTab:'map'
+  };
+  let detailTarget = null;
+
+  // ---------------- SAVE QUEUE (fixes "cannot save" loop) ----------------
+  // Two storage backends: window.storage (only exists inside a Claude artifact
+  // preview) and localStorage (works everywhere, incl. the downloaded standalone
+  // app). We use whichever is actually available so the same file works both ways.
+  const hasCloudStorage = (typeof window.storage !== 'undefined');
+  // Optional real cross-device leaderboard backend. A static GitHub Pages site has no
+  // server of its own, so without this the leaderboard can only ever show your own
+  // device. Paste your own free Firebase Realtime Database URL below to turn on a real
+  // shared leaderboard for the downloaded/GitHub-hosted version too — see the README in
+  // the app bundle for the 2-minute setup. Leave it blank to keep current behavior
+  // (shared only when played through the hosted Claude link).
+  const FIREBASE_DB_URL = ''; // e.g. 'https://your-project-default-rtdb.firebaseio.com'
+  function firebaseKeyFor(email){ return email.replace(/[.#$\[\]/]/g, '_'); }
+  async function rawGet(key){
+    if (hasCloudStorage){
+      try { const res = await window.storage.get(key, false); return (res && res.value) ? res.value : null; }
+      catch(e){ return null; }
+    }
+    try { return localStorage.getItem(key); } catch(e){ return null; }
+  }
+  async function rawSet(key, value){
+    if (hasCloudStorage){
+      try { const res = await window.storage.set(key, value, false); return !!res; }
+      catch(e){ return false; }
+    }
+    try { localStorage.setItem(key, value); return true; } catch(e){ return false; }
+  }
+  async function rawDelete(key){
+    if (hasCloudStorage){ try { await window.storage.delete(key, false); } catch(e){} return; }
+    try { localStorage.removeItem(key); } catch(e){}
+  }
+
+  let dirty = false, saving = false, saveTimer = null;
+  async function saveNow(force){
+    if (!state.loggedIn || !state.email) return true;
+    if (saving){
+      dirty = true;
+      if (!force) return false;
+      // A forced save (e.g. right after picking a starter) must not silently defer to the
+      // next autosave tick — wait for the in-flight save to finish, then save again so the
+      // latest state is guaranteed to be written before we return.
+      await new Promise(resolve=>{
+        const check = setInterval(()=>{ if (!saving){ clearInterval(check); resolve(); } }, 80);
+      });
+      return saveNow(true);
+    }
+    saving = true;
+    let ok = false;
+    for (let attempt=0; attempt<3 && !ok; attempt++){
+      ok = await rawSet('totoquest-profile:'+state.email, JSON.stringify(state));
+      if (!ok && attempt<2) await new Promise(r=>setTimeout(r, 400*(attempt+1)));
+    }
+    saving = false;
+    if (ok){ dirty = false; }
+    else if (force){ showToast('⚠️ Could not save — will retry automatically'); dirty = true; }
+    return ok;
+  }
+  function markDirty(){ dirty = true; }
+  function startAutosave(){
+    if (saveTimer) clearInterval(saveTimer);
+    saveTimer = setInterval(()=>{ if (dirty) saveNow(false); }, 5000);
+  }
+  function stopAutosave(){ if (saveTimer) clearInterval(saveTimer); saveTimer=null; }
+  async function loadProfileByEmail(email){
+    const raw = await rawGet('totoquest-profile:'+email);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch(e){ return null; }
+  }
+  // "Remember me" — stays logged in across closes/reopens until an explicit Logout.
+  async function rememberEmail(email){ await rawSet('totoquest-last-email', email); }
+  async function forgetRememberedEmail(){ await rawDelete('totoquest-last-email'); }
+  async function tryAutoLogin(){
+    const email = await rawGet('totoquest-last-email');
+    if (!email) { return false; }
+    const prof = await loadProfileByEmail(email);
+    if (!prof) { return false; }
+    state = Object.assign({}, state, prof, {loggedIn:true});
+    enterGame(false);
+    return true;
+  }
+
+  function showScreen(name){ $$('.screen').forEach(s=>s.classList.toggle('active', s.dataset.screen===name)); }
+  function showToast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2000); }
+
+  // ---------------- AUTH ----------------
+  $('#tab-login').onclick = ()=>{ $('#tab-login').classList.add('active'); $('#tab-register').classList.remove('active'); $('#login-fields').style.display='block'; $('#register-fields').style.display='none'; };
+  $('#tab-register').onclick = ()=>{ $('#tab-register').classList.add('active'); $('#tab-login').classList.remove('active'); $('#register-fields').style.display='block'; $('#login-fields').style.display='none'; };
+  $$('#gender-select .pill-btn').forEach(btn=>{ btn.onclick = ()=>{ $$('#gender-select .pill-btn').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); }; });
+
+  async function doLogin(email){
+    if (!email){ $('#login-error').textContent='Enter your email.'; return; }
+    $('#login-error').textContent='Checking…';
+    const prof = await loadProfileByEmail(email.trim().toLowerCase());
+    if (!prof){ $('#login-error').textContent='No account found — register first.'; return; }
+    $('#login-error').textContent='';
+    state = Object.assign({}, state, prof, {loggedIn:true});
+    await rememberEmail(state.email);
+    enterGame(false);
+  }
+  $('#btn-login').onclick = ()=> doLogin($('#login-email').value);
+  $('#btn-google-login').onclick = ()=> doLogin(prompt('Simulated Google Sign-In\\nEnter the Google email to log in with:')||'');
+
+  async function doRegister(email, username, gender, age, viaGoogle){
+    email = (email||'').trim().toLowerCase();
+    if (!email || !username){ $('#reg-error').textContent='Fill in username and email.'; return; }
+    $('#reg-error').textContent='Checking…';
+    const existing = await loadProfileByEmail(email);
+    if (existing){ $('#reg-error').textContent='Account already exists — log in instead.'; return; }
+    $('#reg-error').textContent='';
+    state = { loggedIn:true, username, email, gender, age: age||'—', avatar: gender==='male'?'male':'female', energy:100, collection:[], geo:null, activeTab:'map', viaGoogle: !!viaGoogle };
+    const ok = await saveNow(true);
+    await rememberEmail(email);
+    if (!ok) $('#reg-error').textContent = 'Could not reach save storage — you can still play, it will retry automatically.';
+    showScreen('char');
+    $$('.char-card').forEach(c=>c.classList.toggle('sel', c.dataset.av===state.avatar));
+  }
+  $('#btn-register').onclick = ()=>{ const gender = $('#gender-select .sel').dataset.g; doRegister($('#reg-email').value, $('#reg-username').value, gender, $('#reg-age').value, false); };
+  $('#btn-google-register').onclick = ()=>{
+    const email = prompt('Simulated Google Sign-Up\\nEnter a Google email to register with:'); if (!email) return;
+    const username = email.split('@')[0]; const gender = $('#gender-select .sel').dataset.g;
+    doRegister(email, username, gender, $('#reg-age').value, true);
+  };
+  $$('.char-card').forEach(card=>{ card.onclick = ()=>{ $$('.char-card').forEach(c=>c.classList.remove('sel')); card.classList.add('sel'); state.avatar=card.dataset.av; }; });
+  $('#btn-enter-world').onclick = ()=>{
+    if (state.collection.length===0){ showStarterSelect(); } else { enterGame(true); }
+  };
+
+  // ---------------- STARTER SELECT (new accounts only) ----------------
+  function makeStarterToto(natureKey){
+    const [name] = SPECIES[natureKey][0];
+    const cp = rollCP('normal'); const s = statsFromCp(cp);
+    return { id:uid(), name, sprite: NATURE_SVG[natureKey], tier:'normal', nature:natureKey, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
+  }
+  function showStarterSelect(){
+    const grid = $('#starter-grid'); grid.innerHTML='';
+    STARTER_NATURES.forEach((nature, i)=>{
+      const [name] = SPECIES[nature][0];
+      const card = document.createElement('div'); card.className='starter-card' + (i===0?' sel':'');
+      card.dataset.nature = nature;
+      card.innerHTML = '<div class="sp">'+NATURE_SVG[nature]+'</div><div class="nm">'+name+'</div><div class="nature">'+nature+'</div>';
+      card.onclick = ()=>{ $$('.starter-card').forEach(c=>c.classList.remove('sel')); card.classList.add('sel'); };
+      grid.appendChild(card);
+    });
+    showScreen('starter');
+  }
+  $('#btn-confirm-starter').onclick = ()=>{
+    // Read the selection straight from the DOM at confirm-time — no separately-tracked
+    // variable that could ever drift out of sync with what's actually highlighted.
+    const selCard = $('#starter-grid .starter-card.sel') || $('#starter-grid .starter-card');
+    const nature = (selCard && selCard.dataset.nature) || STARTER_NATURES[0];
+    const starter = makeStarterToto(nature);
+    state.collection.push(starter);
+    showToast('Welcome, '+starter.name+'!');
+    enterGame(true);
+  };
+
+  async function enterGame(isNew){
+    const av = state.avatar==='male' ? '🧙‍♂️' : '🧙‍♀️';
+    $('#hud-avatar').textContent = av; $('#player-avatar').textContent = av; $('#profile-avatar').textContent = av;
+    $('#hud-name').textContent = state.username; $('#profile-name').textContent = state.username;
+    $('#profile-email').textContent = state.email; $('#profile-gender').textContent = state.gender; $('#profile-age').textContent = state.age;
+    $('#admin-panel').style.display = (state.email && state.email.toLowerCase()===ADMIN_EMAIL) ? 'block' : 'none';
+    showScreen('game');
+    refreshHUD(); renderCollection(); startAutosave(); spawnClouds();
+    // Build the world right away with a placeholder location so Totos/gyms/battle always
+    // work even if GPS is unavailable or blocked — then try to upgrade to your real position.
+    setAnchorAndBuild(DEFAULT_LAT, DEFAULT_LON);
+    locate();
+    startLocateRetries();
+    await saveNow(true);
+  }
+  function computePowerLevel(){
+    return state.collection.slice().sort((a,b)=>b.cp-a.cp).slice(0,6).reduce((sum,t)=>sum+t.cp,0);
+  }
+  function refreshHUD(){
+    $('#hud-energy').textContent = state.energy; $('#profile-energy').textContent = state.energy; $('#profile-count').textContent = state.collection.length;
+    state.powerLevel = computePowerLevel();
+    $('#profile-power').textContent = state.powerLevel.toLocaleString();
+    updateLeaderboard();
+  }
+  async function updateLeaderboard(){
+    if (!state.loggedIn) return;
+    const entry = { email: state.email, username: state.username, avatar: state.avatar, powerLevel: state.powerLevel };
+    if (FIREBASE_DB_URL){
+      try {
+        await fetch(FIREBASE_DB_URL+'/leaderboard/'+firebaseKeyFor(state.email)+'.json', {
+          method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(entry)
+        });
+        return;
+      } catch(e){ console.warn('firebase leaderboard update failed', e); }
+    }
+    if (!hasCloudStorage) return;
+    try {
+      const cur = await window.storage.get('totoquest-leaderboard', true);
+      let board = {};
+      if (cur && cur.value){ try { board = JSON.parse(cur.value); } catch(e){ board={}; } }
+      board[state.email] = entry;
+      await window.storage.set('totoquest-leaderboard', JSON.stringify(board), true);
+    } catch(e){ console.warn('leaderboard update failed', e); }
+  }
+  async function loadLeaderboard(){
+    const list = $('#leaderboard-list');
+    list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">Loading…</p>';
+    let rows = [];
+    if (FIREBASE_DB_URL){
+      try {
+        const res = await fetch(FIREBASE_DB_URL+'/leaderboard.json');
+        const board = await res.json();
+        rows = board ? Object.values(board) : [];
+      } catch(e){ console.warn('firebase leaderboard load failed', e); list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">Could not reach the leaderboard server.</p>'; return; }
+    } else if (hasCloudStorage){
+      try {
+        const res = await window.storage.get('totoquest-leaderboard', true);
+        let board = {};
+        if (res && res.value){ try { board = JSON.parse(res.value); } catch(e){} }
+        rows = Object.values(board);
+      } catch(e){ list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">Could not load the leaderboard right now.</p>'; return; }
+    } else {
+      list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">This copy has no shared leaderboard server configured yet — showing just you: <b>'+(state.powerLevel||0).toLocaleString()+'</b>. See the app&#39;s README to turn on a real cross-device leaderboard (free, ~2 minutes).</p>';
+      return;
+    }
+    rows.sort((a,b)=>b.powerLevel-a.powerLevel);
+    if (!rows.length){ list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">No trainers on the board yet.</p>'; return; }
+    list.innerHTML = rows.map((r,i)=>{
+      const isMe = r.email===state.email;
+      const av = r.avatar==='male' ? '🧙‍♂️' : '🧙‍♀️';
+      return '<div class="toto-card" style="display:flex; align-items:center; gap:10px; text-align:left; margin-bottom:8px;'+(isMe?' border:2px solid #ff8a3d;':'')+'">'+
+        '<div style="font-weight:800; width:22px;">'+(i+1)+'</div>'+
+        '<div style="font-size:24px;">'+av+'</div>'+
+        '<div style="flex:1;"><div class="nm" style="font-size:13px;">'+r.username+(isMe?' (you)':'')+'</div></div>'+
+        '<div style="font-weight:800; color:#ff8a3d;">'+r.powerLevel.toLocaleString()+'</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // ---------------- GEO / WORLD / CAMERA ----------------
+  let watchId = null, simulateMode = false, lastMoveTs = Date.now(), idleCheckTimer = null;
+  state.cameraRotate = 0; state.worldOffset = {x:0,y:0}; state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
+  state.cameraZoom = 1; state.cameraTilt = TILT_MAX * (1-ZOOM_MIN)/(ZOOM_MAX-ZOOM_MIN);
+
+  function metersDelta(lat0, lon0, lat1, lon1){
+    const mPerDegLat = 110540, mPerDegLon = 111320 * Math.cos(lat0*Math.PI/180);
+    return { east:(lon1-lon0)*mPerDegLon, north:(lat1-lat0)*mPerDegLat };
+  }
+  function applyWorldTransform(){
+    const o = state.worldOffset || {x:0,y:0};
+    // Tilt lives on the OUTER wrapper only, so it always tilts the camera toward whatever
+    // you're currently facing — panning/rotating the world underneath (on the inner element)
+    // never fights with it, which is what caused the flip/glitch bug.
+    $('#world-tilt').style.transform = 'rotateX('+state.cameraTilt.toFixed(1)+'deg)';
+    $('#world').style.transform =
+      'translate(calc(-50% - '+o.x.toFixed(1)+'px), calc(-50% + '+o.y.toFixed(1)+'px)) '+
+      'rotate('+state.cameraRotate+'deg) scale('+state.cameraZoom.toFixed(2)+')';
+    // Every Toto/gym/tree marker counter-rotates against this so they always stay upright
+    // and face you, no matter which way the camera is currently turned.
+    $('#world').style.setProperty('--rot', state.cameraRotate+'deg');
+  }
+  function setAnchorAndBuild(lat, lon){
+    state.geo = {lat, lon}; state.geoAnchor = {lat, lon}; state.worldOffset = {x:0,y:0};
+    state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
+    applyWorldTransform();
+    buildWorld();
+  }
+  function onPositionUpdate(lat, lon, viaSim){
+    if (!state.geoAnchor){ setAnchorAndBuild(lat, lon); return; }
+    const prevGeo = state.geo;
+    const step = prevGeo ? metersDelta(prevGeo.lat, prevGeo.lon, lat, lon) : {east:0,north:0};
+    const stepDist = Math.hypot(step.east, step.north);
+    state.geo = {lat, lon};
+    if (!viaSim && stepDist < 1.0) return;
+    lastMoveTs = Date.now();
+    $('#player-avatar').classList.add('walking');
+
+    // The anchor never resets — the world just keeps extending as you walk, like a real map.
+    const fromAnchor = metersDelta(state.geoAnchor.lat, state.geoAnchor.lon, lat, lon);
+    state.worldOffset = { x: fromAnchor.east*GPS_SCALE, y: fromAnchor.north*GPS_SCALE };
+    state.playerWorldPos = { x: WORLD_CENTER + fromAnchor.east*GPS_SCALE, y: WORLD_CENTER - fromAnchor.north*GPS_SCALE };
+    applyWorldTransform();
+    refreshNodeDistances();
+    ensureChunksLoaded();
+    $('#gps-status').textContent = (viaSim?'SIMULATED · ':'GPS: ')+lat.toFixed(5)+', '+lon.toFixed(5)+' · walking';
+  }
+  let heartbeatTimer = null, retryTimer = null, gotRealFix = false;
+  function startWatch(){
+    if (!navigator.geolocation) return;
+    try {
+      if (watchId!==null) navigator.geolocation.clearWatch(watchId);
+      watchId = navigator.geolocation.watchPosition(
+        pos => { gotRealFix = true; onPositionUpdate(pos.coords.latitude, pos.coords.longitude, false); },
+        err => {
+          const msgs = {1:'Location permission blocked (this in-chat preview may not allow it — try the downloaded app on your phone).', 2:'Position unavailable right now.', 3:'GPS is taking too long to respond.'};
+          $('#gps-status').textContent = 'Using default area · ' + (msgs[err.code] || err.message) + ' Try 🕹️ to test walking.';
+        },
+        {enableHighAccuracy:true, maximumAge:0, timeout:15000}
+      );
+    } catch(e){
+      console.warn('watchPosition threw', e);
+      $('#gps-status').textContent = 'Using default area · location tracking blocked here. Try 🕹️ to test walking, or use the downloaded app on your phone.';
+    }
+    // Backup heartbeat: some mobile browsers silently stop delivering watchPosition updates
+    // (screen lock, backgrounding, etc). This redundant poll keeps the camera tracking your
+    // real position even if the primary watch stalls, without needing you to tap anything.
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(()=>{
+      if (!navigator.geolocation || simulateMode) return;
+      try {
+        navigator.geolocation.getCurrentPosition(
+          pos => { gotRealFix = true; onPositionUpdate(pos.coords.latitude, pos.coords.longitude, false); },
+          ()=>{}, {enableHighAccuracy:true, maximumAge:3000, timeout:8000}
+        );
+      } catch(e){}
+    }, 6000);
+  }
+  if (!idleCheckTimer){ idleCheckTimer = setInterval(()=>{ if (Date.now()-lastMoveTs>1500) $('#player-avatar').classList.remove('walking'); }, 500); }
+
+  function locate(){
+    if (!navigator.geolocation){ $('#gps-status').textContent='Using default area · GPS unavailable on this device/browser. Try 🕹️ to test walking.'; return; }
+    $('#gps-status').textContent = 'Using default area · looking for real GPS…';
+    try {
+      navigator.geolocation.getCurrentPosition(pos=>{
+        gotRealFix = true;
+        setAnchorAndBuild(pos.coords.latitude, pos.coords.longitude);
+        startWatch();
+      }, err=>{
+        const msgs = {1:'Location permission was blocked. This in-chat preview may not be allowed to use GPS — the downloaded Android app should work once installed on your phone.', 2:'Position unavailable.', 3:'GPS timed out.'};
+        $('#gps-status').textContent = 'Using default area · ' + (msgs[err.code] || err.message) + ' Try 🕹️ to test walking.';
+      }, {enableHighAccuracy:true, timeout:10000});
+    } catch(e){
+      console.warn('getCurrentPosition threw', e);
+      $('#gps-status').textContent = 'Using default area · location is blocked in this preview. Try 🕹️ to test walking, or use the downloaded app on your phone.';
+    }
+  }
+  $('#btn-locate').onclick = locate;
+  // Auto-retry a few times once the game actually starts, so you never HAVE to tap the
+  // compass button yourself — it's just there as a manual re-center option if you want it.
+  let locateAttempts = 0;
+  function startLocateRetries(){
+    locateAttempts = 0;
+    if (retryTimer) clearInterval(retryTimer);
+    retryTimer = setInterval(()=>{
+      locateAttempts++;
+      if (gotRealFix || simulateMode || locateAttempts>6){ clearInterval(retryTimer); return; }
+      locate();
+    }, 8000);
+  }
+
+  // Simulated walking — lets you test movement/scrolling/proximity even where real GPS isn't reachable.
+  $('#btn-simulate').onclick = ()=>{
+    simulateMode = !simulateMode;
+    $('#dpad').classList.toggle('show', simulateMode);
+    if (simulateMode){
+      try { if (watchId!==null) navigator.geolocation.clearWatch(watchId); } catch(e){}
+      watchId=null;
+      showToast('Test-walk mode on — use the arrows');
+    } else { showToast('Test-walk mode off — resuming real GPS'); startWatch(); }
+  };
+  $$('#dpad button[data-dir]').forEach(btn=>{
+    btn.onclick = ()=>{
+      if (!state.geo) return;
+      const stepM = 9; // meters per tap
+      const dirs = { n:{east:0,north:stepM}, s:{east:0,north:-stepM}, e:{east:stepM,north:0}, w:{east:-stepM,north:0} };
+      const d = dirs[btn.dataset.dir];
+      const mPerDegLat = 110540, mPerDegLon = 111320*Math.cos(state.geo.lat*Math.PI/180);
+      const newLat = state.geo.lat + d.north/mPerDegLat;
+      const newLon = state.geo.lon + d.east/mPerDegLon;
+      onPositionUpdate(newLat, newLon, true);
+    };
+  });
+
+  // Camera zoom/tilt are the same gesture, Pokemon GO style: zooming in also lowers the
+  // camera to ground level so you can see further down the road; zooming out returns to
+  // the flat sky view. Rotation is a separate, single-finger left/right swipe.
+  function setZoom(z){
+    state.cameraZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+    const t = (state.cameraZoom - ZOOM_MIN) / (ZOOM_MAX - ZOOM_MIN);
+    state.cameraTilt = TILT_MAX * t;
+    applyWorldTransform();
+  }
+  $('#btn-zoom-in').onclick = ()=> setZoom(state.cameraZoom + 0.15);
+  $('#btn-zoom-out').onclick = ()=> setZoom(state.cameraZoom - 0.15);
+  $('#btn-rotate-l').onclick = ()=>{ state.cameraRotate = (state.cameraRotate-20+360)%360; applyWorldTransform(); };
+  $('#btn-rotate-r').onclick = ()=>{ state.cameraRotate = (state.cameraRotate+20)%360; applyWorldTransform(); };
+
+  // Single finger = swipe left/right to turn around your character.
+  // Two fingers = pinch out to zoom into ground level, pinch in to return to sky view.
+  (function setupLookAround(){
+    const mapView = $('#map-view');
+    mapView.style.touchAction = 'none';
+    const ROTATE_SENSITIVITY = 0.5; // degrees per pixel dragged horizontally
+    const activePointers = new Map();
+    let rotateDrag = null;
+    let pinchState = null;
+
+    function distanceBetween(pts){ return Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y); }
+
+    mapView.addEventListener('pointerdown', (e)=>{
+      if (e.target.closest('.toto-node, .gym-node, .map-controls, .dpad')) return;
+      activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      try { mapView.setPointerCapture(e.pointerId); } catch(err){}
+      if (activePointers.size===1){
+        rotateDrag = { startX:e.clientX, startRotate: state.cameraRotate, pointerId:e.pointerId };
+        pinchState = null;
+      } else if (activePointers.size===2){
+        rotateDrag = null;
+        const pts = Array.from(activePointers.values());
+        pinchState = { startDist: distanceBetween(pts), startZoom: state.cameraZoom };
+      }
+    });
+    mapView.addEventListener('pointermove', (e)=>{
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+      if (activePointers.size>=2 && pinchState){
+        const pts = Array.from(activePointers.values());
+        const ratio = distanceBetween(pts) / pinchState.startDist;
+        setZoom(pinchState.startZoom * ratio);
+      } else if (rotateDrag && e.pointerId===rotateDrag.pointerId){
+        const dx = e.clientX - rotateDrag.startX;
+        let r = (rotateDrag.startRotate + dx*ROTATE_SENSITIVITY) % 360;
+        if (r < 0) r += 360;
+        state.cameraRotate = r;
+        applyWorldTransform();
+      }
+    });
+    function releasePointer(e){
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) pinchState = null;
+      if (rotateDrag && e.pointerId===rotateDrag.pointerId) rotateDrag = null;
+      if (activePointers.size===1){
+        const entry = Array.from(activePointers.entries())[0];
+        rotateDrag = { startX: entry[1].x, startRotate: state.cameraRotate, pointerId: entry[0] };
+      }
+    }
+    mapView.addEventListener('pointerup', releasePointer);
+    mapView.addEventListener('pointercancel', releasePointer);
+    mapView.addEventListener('pointerleave', releasePointer);
+  })();
+
+  // ---------------- COORDINATE HELPERS ----------------
+  function worldPosFromMeters(east, north){ return { x: WORLD_CENTER + east*GPS_SCALE, y: WORLD_CENTER - north*GPS_SCALE }; }
+  function latLonFromMeters(east, north){
+    const lat0 = state.geoAnchor.lat, lon0 = state.geoAnchor.lon;
+    const lat = lat0 + north/110540;
+    const lon = lon0 + east/(111320*Math.cos(lat0*Math.PI/180));
+    return {lat, lon};
+  }
+  function centroidOfGeometry(geometry, project){
+    let sx=0, sy=0;
+    geometry.forEach(pt=>{ const p = project(pt.lat, pt.lon); sx+=p.x; sy+=p.y; });
+    return { x: sx/geometry.length, y: sy/geometry.length };
+  }
+  function distanceMetersToWorldPoint(x, y){ return Math.hypot(x-state.playerWorldPos.x, y-state.playerWorldPos.y)/GPS_SCALE; }
+  function refreshNodeDistances(){
+    (state.wildTotos||[]).forEach(t=>{ if (t._distEl) t._distEl.textContent = Math.round(distanceMetersToWorldPoint(t._x,t._y))+'m'; });
+    (state.gyms||[]).forEach(g=>{ if (g._distEl) g._distEl.textContent = Math.round(distanceMetersToWorldPoint(g.x,g.y))+'m'; });
+    const nearby = (state.wildTotos||[]).filter(t=> distanceMetersToWorldPoint(t._x,t._y) < 150).length;
+    $('#hud-nearby').textContent = nearby;
+  }
+
+  const GYM_NAMES = ['Ashfall Gym','Frostpeak Gym','Thunder Gym','Bramble Gym','Cinderpeak Gym','Mossmere Gym','Stormvale Gym','Hollowreach Gym'];
+  const MAX_WILD_TOTOS = 140, MAX_GYMS = 30;
+
+  function appendTotoNode(t){
+    const node = document.createElement('div'); node.className='toto-node';
+    node.style.left=t._x+'px'; node.style.top=t._y+'px';
+    node.innerHTML = '<div class="node-shadow"></div><div class="node-spin"><div class="bubble">'+spriteMarkup(t)+'</div><div class="cp-tag">CP '+t.cp+'</div><div class="dist-tag">…m</div></div>';
+    t._distEl = node.querySelector('.dist-tag');
+    t._node = node;
+    node.onclick = ()=> tryStartEncounter(t);
+    $('#toto-layer').appendChild(node);
+  }
+  const RESPAWN_DELAY_MS = 3*60*1000; // a caught spot re-spawns something after ~3 minutes
+  const AMBIENT_SPAWN_INTERVAL_MS = 55*1000; // new wild Totos trickle in near you as you keep walking
+  function removeTotoFromMap(t){
+    const idx = state.wildTotos.indexOf(t);
+    if (idx>=0) state.wildTotos.splice(idx,1);
+    if (t._node && t._node.parentNode) t._node.parentNode.removeChild(t._node);
+  }
+  function spawnWildTotoAt(x, y, chunkKey){
+    if (state.wildTotos.length >= MAX_WILD_TOTOS) return;
+    const t = makeToto('normal');
+    t._x = x; t._y = y; t._chunkKey = chunkKey;
+    state.wildTotos.push(t);
+    appendTotoNode(t);
+    refreshNodeDistances();
+  }
+  if (!window.__totoAmbientSpawnTimer){
+    window.__totoAmbientSpawnTimer = setInterval(()=>{
+      if (!state.geoAnchor || !state.playerWorldPos) return;
+      // Small chance of a fresh spawn appearing somewhere near your current position —
+      // the "as you walk more, more appear" behavior, independent of catching anything.
+      if (Math.random() < 0.55 && state.wildTotos.length < MAX_WILD_TOTOS){
+        const ang = Math.random()*Math.PI*2;
+        const distM = 60 + Math.random()*160; // 60-220m away
+        const px = state.playerWorldPos.x + Math.cos(ang)*distM*GPS_SCALE;
+        const py = state.playerWorldPos.y + Math.sin(ang)*distM*GPS_SCALE;
+        spawnWildTotoAt(px, py, null);
+      }
+    }, AMBIENT_SPAWN_INTERVAL_MS);
+  }
+  function appendGymNode(gym){
+    const ring = document.createElement('div'); ring.className='gym-radius';
+    const ringPx = GYM_RADIUS_M*2*GPS_SCALE;
+    ring.style.width=ringPx+'px'; ring.style.height=ringPx+'px'; ring.style.left=gym.x+'px'; ring.style.top=(gym.y-14)+'px';
+    $('#gym-layer').appendChild(ring);
+    gym._ringEl = ring;
+    const node = document.createElement('div'); node.className='gym-node';
+    node.style.left=gym.x+'px'; node.style.top=gym.y+'px';
+    node.innerHTML = '<div class="node-shadow"></div><div class="node-spin"><div class="bubble">'+(gym.atPark?'🌳':'🏟️')+'</div><div class="gym-label">'+gym.name+'</div><div class="dist-tag">…m</div></div>';
+    gym._distEl = node.querySelector('.dist-tag');
+    gym._node = node;
+    node.onclick = ()=> tryStartGymRaid(gym);
+    $('#gym-layer').appendChild(node);
+  }
+  function refreshGymNode(gym){
+    if (gym._ringEl){ gym._ringEl.style.left = gym.x+'px'; gym._ringEl.style.top = (gym.y-14)+'px'; }
+    if (gym._node){
+      gym._node.style.left = gym.x+'px'; gym._node.style.top = gym.y+'px';
+      const bubble = gym._node.querySelector('.bubble');
+      if (bubble) bubble.textContent = gym.atPark ? '🌳' : '🏟️';
+    }
+  }
+
+  // ---------------- CHUNKED, NEVER-ENDING WORLD ----------------
+  // The anchor is set once and never resets. As you walk, we track which ~350m chunk
+  // you're in and quietly load real roads/buildings/parks/water + spawns for that chunk
+  // and its neighbors the first time you get near them — chunks already loaded are never
+  // cleared or redrawn, so you can keep walking indefinitely, like a real map.
+  function chunkKey(cx, cy){ return cx+','+cy; }
+  function currentChunkCoords(){
+    const east = (state.playerWorldPos.x - WORLD_CENTER)/GPS_SCALE;
+    const north = (WORLD_CENTER - state.playerWorldPos.y)/GPS_SCALE;
+    return { cx: Math.floor(east/CHUNK_SIZE_M), cy: Math.floor(north/CHUNK_SIZE_M) };
+  }
+  let chunkQueue = [], chunkQueueSet = new Set(), chunkLoading = false;
+  function ensureChunksLoaded(){
+    if (!state.geoAnchor) return;
+    const {cx, cy} = currentChunkCoords();
+    // Load the chunk you're standing in first — this is what makes the map feel instant —
+    // then the surrounding ring loads in behind it as a lower priority.
+    queueChunk(cx, cy, true);
+    for (let dx=-1; dx<=1; dx++){
+      for (let dy=-1; dy<=1; dy++){
+        if (dx===0 && dy===0) continue;
+        queueChunk(cx+dx, cy+dy, false);
+      }
+    }
+    processChunkQueue();
+  }
+  function queueChunk(cx, cy, priority){
+    const key = chunkKey(cx, cy);
+    if (state.loadedChunks.has(key) || chunkQueueSet.has(key)) return;
+    chunkQueueSet.add(key);
+    const job = {key, cx, cy};
+    if (priority) chunkQueue.unshift(job); else chunkQueue.push(job);
+  }
+  const CHUNK_CONCURRENCY = 3; // load a few chunks at once instead of one-by-one
+  async function processChunkQueue(){
+    if (chunkLoading) return;
+    chunkLoading = true;
+    const workers = [];
+    for (let i=0; i<CHUNK_CONCURRENCY; i++) workers.push(chunkWorker());
+    await Promise.all(workers);
+    chunkLoading = false;
+  }
+  async function chunkWorker(){
+    while (chunkQueue.length){
+      const job = chunkQueue.shift();
+      chunkQueueSet.delete(job.key);
+      if (state.loadedChunks.has(job.key)) continue;
+      state.loadedChunks.add(job.key);
+      try { await loadChunk(job.cx, job.cy); } catch(e){ console.warn('chunk load failed', e); }
+    }
+  }
+  async function loadChunk(cx, cy){
+    const centerEast = (cx+0.5)*CHUNK_SIZE_M, centerNorth = (cy+0.5)*CHUNK_SIZE_M;
+    const {lat, lon} = latLonFromMeters(centerEast, centerNorth);
+    const baseSeed = Math.abs(Math.floor(lat*100000) + Math.floor(lon*100000) + cx*7919 + cy*104729);
+
+    // procedural decorations for this chunk (trees/flowers — atmosphere, not GPS-accurate)
+    if (Math.abs(cx)+Math.abs(cy) < 40){ // sanity guard against runaway generation far off-map
+      const decoLayer = $('#deco-layer');
+      const decoEmojis = ['🌳','🌳','🌲','🌸','🪨','🍄','🌷','🪵'];
+      for (let i=0;i<10;i++){
+        const s = baseSeed + i*17.3;
+        const east = centerEast + (rand(s)-0.5)*CHUNK_SIZE_M;
+        const north = centerNorth + (rand(s+1)-0.5)*CHUNK_SIZE_M;
+        const pos = worldPosFromMeters(east, north);
+        const size = 18+rand(s+2)*16;
+        const el = document.createElement('div'); el.className='deco';
+        el.style.left = pos.x+'px'; el.style.top = pos.y+'px';
+        el.innerHTML = '<div class="deco-shadow" style="width:'+(size*0.7)+'px; height:'+(size*0.28)+'px;"></div>'
+          + '<span class="counter-rot" style="position:relative; z-index:2; display:inline-block; font-size:'+size+'px;">'+decoEmojis[Math.floor(rand(s+3)*decoEmojis.length)]+'</span>';
+        decoLayer.appendChild(el);
+      }
+    }
+
+    // wild Totos for this chunk — spawn immediately, don't wait on the network
+    if (state.wildTotos.length < MAX_WILD_TOTOS){
+      const wildCount = 1 + Math.floor(rand(baseSeed+50)*2);
+      for (let i=0;i<wildCount;i++){
+        const s = baseSeed + i*233.7;
+        const east = centerEast + (rand(s)-0.5)*CHUNK_SIZE_M;
+        const north = centerNorth + (rand(s+1)-0.5)*CHUNK_SIZE_M;
+        const pos = worldPosFromMeters(east, north);
+        const t = makeToto('normal');
+        t._x = pos.x; t._y = pos.y; t._chunkKey = chunkKey(cx, cy);
+        state.wildTotos.push(t);
+        appendTotoNode(t);
+      }
+    }
+
+    // Gym spawns immediately at a walkable fallback spot — no waiting on the network for it
+    // to appear — then quietly slides onto a real nearby park if the terrain fetch finds one.
+    let gym = null;
+    if (state.gyms.length < MAX_GYMS && rand(baseSeed+90) < 0.22){
+      const east = centerEast + (rand(baseSeed+91)-0.5)*CHUNK_SIZE_M*0.6;
+      const north = centerNorth + (rand(baseSeed+92)-0.5)*CHUNK_SIZE_M*0.6;
+      const pos = worldPosFromMeters(east, north);
+      const boss = makeToto(rand(baseSeed+93)<0.5 ? 'legendary' : 'mythical');
+      gym = { id:uid(), x:pos.x, y:pos.y, boss, name: GYM_NAMES[Math.floor(rand(baseSeed+94)*GYM_NAMES.length)], atPark:false };
+      state.gyms.push(gym);
+      appendGymNode(gym);
+      renderBattleList();
+    }
+
+    // Live roads/buildings/parks/water for this chunk — this is what makes the map match
+    // reality, drawn in on top once it arrives without blocking anything above.
+    try {
+      const parks = await fetchChunkTerrain(lat, lon);
+      if (gym && parks.length){
+        const spot = parks[Math.floor(rand(baseSeed+95)*parks.length)];
+        gym.x = spot.x; gym.y = spot.y; gym.atPark = true;
+        refreshGymNode(gym);
+      }
+    } catch(e){ console.warn('terrain fetch failed', e); }
+
+    refreshNodeDistances();
+  }
+
+  async function fetchChunkTerrain(lat, lon){
+    const d = 0.0023; // slightly larger than a chunk so edges overlap cleanly
+    const bbox = (lat-d)+','+(lon-d)+','+(lat+d)+','+(lon+d);
+    const query = '[out:json][timeout:10];('
+      +'way["highway"]('+bbox+');'
+      +'way["building"]('+bbox+');'
+      +'way["leisure"="park"]('+bbox+');'
+      +'way["leisure"="garden"]('+bbox+');'
+      +'way["landuse"="recreation_ground"]('+bbox+');'
+      +'way["natural"="water"]('+bbox+');'
+      +'way["landuse"="reservoir"]('+bbox+');'
+      +'way["waterway"="river"]('+bbox+');'
+      +'way["waterway"="stream"]('+bbox+');'
+      +');out geom;';
+    const endpoints = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), 8000);
+    let data = null;
+    // Race both mirrors and use whichever answers first, instead of trying one at a
+    // time — this is the biggest single win for how long a new area takes to appear.
+    try {
+      data = await Promise.any(endpoints.map(base=>
+        fetch(base+'?data='+encodeURIComponent(query), {signal: ctrl.signal})
+          .then(resp=>{ if (!resp.ok) throw new Error('bad status '+resp.status); return resp.json(); })
+      ));
+    } catch(e){ console.warn('all terrain endpoints failed:', e); }
+    clearTimeout(timer);
+    if (!data || !data.elements || !data.elements.length) return [];
+
+    const project = (la, lo)=>{ const md = metersDelta(state.geoAnchor.lat, state.geoAnchor.lon, la, lo); return worldPosFromMeters(md.east, md.north); };
+    const smallRoads = new Set(['footway','path','pedestrian','track','cycleway','steps']);
+    const waterParts=[], parkParts=[], roadParts=[], buildingParts=[];
+    const parkCentroids = [];
+
+    data.elements.forEach(el=>{
+      if (!el.geometry || el.geometry.length<2) return;
+      const t = el.tags || {};
+      const pts = el.geometry.map(pt=>{ const p = project(pt.lat, pt.lon); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+      if (t.natural==='water' || t.landuse==='reservoir'){
+        waterParts.push('<polygon points="'+pts+'" fill="#5ec2f0" stroke="#3f9fd1" stroke-width="3" opacity="0.92"/>');
+      } else if (t.waterway==='river' || t.waterway==='stream'){
+        waterParts.push('<polyline points="'+pts+'" fill="none" stroke="#5ec2f0" stroke-width="'+(t.waterway==='river'?16:8)+'" stroke-linecap="round"/>');
+      } else if (t.leisure==='park' || t.leisure==='garden' || t.landuse==='recreation_ground'){
+        parkParts.push('<polygon points="'+pts+'" fill="#4fae4a" stroke="#3a8f38" stroke-width="2.5" opacity="0.88"/>');
+        parkCentroids.push(centroidOfGeometry(el.geometry, project));
+      } else if (t.highway){
+        const isSmall = smallRoads.has(t.highway);
+        roadParts.push('<polyline points="'+pts+'" fill="none" stroke="'+(isSmall?'#f1e6c8':'#e8d9b5')+'" stroke-width="'+(isSmall?10:26)+'" stroke-linecap="round" stroke-linejoin="round"/>');
+      } else if (t.building){
+        buildingParts.push('<polygon points="'+pts+'" fill="#d9c9a8" stroke="#a8926a" stroke-width="2"/>');
+      }
+    });
+
+    if (waterParts.length || parkParts.length || roadParts.length || buildingParts.length){
+      const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+      g.innerHTML = waterParts.join('') + parkParts.join('') + roadParts.join('') + buildingParts.join('');
+      $('#terrain-svg').appendChild(g);
+    }
+    return parkCentroids;
+  }
+
+  // ---------------- SESSION SETUP (runs once per anchor) ----------------
+  function buildWorld(){
+    $('#terrain-svg').innerHTML = '';
+    $('#deco-layer').innerHTML = '';
+    $('#toto-layer').innerHTML = '';
+    $('#gym-layer').innerHTML = '';
+    state.wildTotos = [];
+    state.gyms = [];
+    state.loadedChunks = new Set();
+    chunkQueue = []; chunkQueueSet = new Set();
+
+    const {lat, lon} = state.geoAnchor;
+    const baseSeed = Math.abs(Math.floor((lat*10000) + (lon*10000)));
+
+    // Challenger shrines: fixed for the whole session, always battle-ready from anywhere —
+    // deliberately NOT placed on the map, only reachable through the Challenger tab.
+    state.shrines = [];
+    const shrineNames = ['Crypt Tower','Ashen Shrine'];
+    for (let i=0;i<3;i++){
+      const guardian = (i===0) ? makeToniGuardian() : makeToto('eternal');
+      if (!guardian.isToni) guardian.name = shrineNames[i%shrineNames.length]+' Guardian';
+      const shrineName = guardian.isToni ? "Toni's Hollow" : shrineNames[i%shrineNames.length];
+      state.shrines.push({ id:uid(), guardian, name: shrineName });
+    }
+    renderChallenger(); renderBattleList();
+
+    ensureChunksLoaded();
+  }
+
+  function spawnClouds(){
+    const c = $('#clouds'); c.innerHTML='';
+    for (let i=0;i<4;i++){ const el=document.createElement('div'); el.className='cloud'; el.textContent='☁️'; el.style.top=(10+i*22)+'%'; el.style.animationDuration=(30+i*10)+'s'; el.style.animationDelay=(-i*8)+'s'; c.appendChild(el); }
+  }
+
+
+  // ---------------- NAV ----------------
+  $$('.nav-btn').forEach(btn=>{
+    btn.onclick = ()=>{
+      $$('.nav-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      if (tab==='map'){ $$('.panel-screen').forEach(p=>p.classList.remove('active')); return; }
+      $$('.panel-screen').forEach(p=>p.classList.toggle('active', p.dataset.panel===tab));
+      if (tab==='totos') renderCollection();
+      if (tab==='challenger') renderChallenger();
+      if (tab==='battle') renderBattleList();
+      if (tab==='profile') refreshHUD();
+    };
+  });
+  $$('[data-close]').forEach(x=> x.onclick = ()=>{ $$('.panel-screen').forEach(p=>p.classList.remove('active')); $$('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab==='map')); });
+
+  function renderCollection(){
+    const grid = $('#toto-collection'); grid.innerHTML='';
+    if (state.collection.length===0){ grid.innerHTML = '<p style="grid-column:1/-1; color:#999; font-weight:700; font-size:13px;">No Totos yet — battle a wild Toto on the map to catch one.</p>'; return; }
+    state.collection.slice().sort((a,b)=>b.cp-a.cp).forEach(t=>{
+      const card = document.createElement('div'); card.className='toto-card';
+      card.innerHTML = '<div class="sp'+(t.isToni?' toni-glow':'')+'">'+spriteMarkup(t)+'</div><div class="nm">'+t.name+'</div><div class="lv">Lv.'+t.level+'</div><div class="cp">CP '+t.cp+'</div><div class="tier-badge tier-'+t.tier+'">'+t.tier+'</div>';
+      card.onclick = ()=> openDetail(t.id);
+      grid.appendChild(card);
+    });
+  }
+  function gymRowHtml(g){
+    const distM = state.geoAnchor ? Math.round(distanceMetersToWorldPoint(g.x, g.y)) : 0;
+    const inRange = distM <= GYM_RADIUS_M;
+    return '<div class="toto-card shrine-row" data-gym="'+g.id+'">'+
+      '<div class="sp">'+spriteMarkup(g.boss)+'</div>'+
+      '<div class="info"><div class="nm" style="font-size:13px;">'+g.name+'</div><div class="cp">'+g.boss.name+' · CP '+g.boss.cp+' · '+g.boss.tier+'</div></div>'+
+      '<div><span class="range-tag '+(inRange?'range-in':'range-out')+'">'+distM+'m '+(inRange?'· In range':'· Too far')+'</span></div>'+
+    '</div>';
+  }
+  function shrineRowHtml(sh){
+    return '<div class="toto-card shrine-row" data-shrine="'+sh.id+'">'+
+      '<div class="sp'+(sh.guardian.isToni?' toni-glow':'')+'">'+spriteMarkup(sh.guardian)+'</div>'+
+      '<div class="info"><div class="nm" style="font-size:13px;">'+sh.name+'</div><div class="cp">Guardian: '+sh.guardian.name+' · CP '+sh.guardian.cp+'</div></div>'+
+      '<div><span class="range-tag range-in">Always ready</span></div>'+
+    '</div>';
+  }
+  function renderChallenger(){
+    const list = $('#challenger-list'); if (!list) return; list.innerHTML='';
+    (state.shrines||[]).forEach(sh=>{ list.insertAdjacentHTML('beforeend', shrineRowHtml(sh)); });
+    $$('.shrine-row[data-shrine]', list).forEach(row=>{
+      const sh = (state.shrines||[]).find(s=>s.id===row.dataset.shrine);
+      row.onclick = ()=> openBattleSetup({ type:'challenge', shrine: sh });
+    });
+  }
+  function renderBattleList(){
+    const list = $('#battle-shrine-list'); if (!list) return; list.innerHTML='';
+    if (!state.gyms || state.gyms.length===0){ list.innerHTML = '<p style="color:#999; font-weight:700; font-size:13px;">Walk around to discover nearby gyms…</p>'; return; }
+    state.gyms.slice().sort((a,b)=> distanceMetersToWorldPoint(a.x,a.y) - distanceMetersToWorldPoint(b.x,b.y)).slice(0,10).forEach(g=>{
+      list.insertAdjacentHTML('beforeend', gymRowHtml(g));
+    });
+    $$('.shrine-row[data-gym]', list).forEach(row=>{
+      const g = (state.gyms||[]).find(x=>x.id===row.dataset.gym);
+      row.onclick = ()=> tryStartGymRaid(g);
+    });
+  }
+
+  // ---------------- PROXIMITY GATES ----------------
+  let pendingCatch = null;
+  function tryStartEncounter(t){
+    const distM = distanceMetersToWorldPoint(t._x, t._y);
+    if (distM > WILD_RADIUS_M){ showToast('Too far ('+Math.round(distM)+'m) — get within '+WILD_RADIUS_M+'m of it.'); return; }
+    pendingCatch = t;
+    $('#enc-sprite').innerHTML = spriteMarkup(t); $('#enc-name').textContent = t.name; $('#enc-sub').textContent = 'CP '+t.cp+' · normal';
+    $('#encounter-modal').classList.add('active');
+  }
+  $$('[data-close-enc]').forEach(x=> x.onclick = ()=>{ $('#encounter-modal').classList.remove('active'); pendingCatch=null; });
+  $('#btn-throw').onclick = ()=>{
+    if (!pendingCatch) return;
+    const caught = pendingCatch;
+    const respawnX = caught._x, respawnY = caught._y, respawnChunk = caught._chunkKey;
+    state.collection.push(caught);
+    removeTotoFromMap(caught);
+    showToast('Caught '+caught.name+'!');
+    renderCollection(); refreshHUD(); markDirty(); saveNow(false);
+    $('#encounter-modal').classList.remove('active');
+    pendingCatch = null;
+    // Something new will turn up at roughly this same spot after a few minutes.
+    setTimeout(()=>{ spawnWildTotoAt(respawnX, respawnY, respawnChunk); }, RESPAWN_DELAY_MS);
+  };
+  function tryStartGymRaid(gym){
+    const distM = distanceMetersToWorldPoint(gym.x, gym.y);
+    if (distM > GYM_RADIUS_M){ showToast('Too far ('+Math.round(distM)+'m) — get within '+GYM_RADIUS_M+'m of the gym.'); return; }
+    openBattleSetup({ type:'gym', gym });
+  }
+
+  // ---------------- TOTO DETAIL / POWER UP ----------------
+  function statBarRow(label, val, max, color){
+    const pct = Math.max(4, Math.min(100, Math.round(val/max*100)));
+    return '<div class="stat-line"><span class="lbl">'+label+'</span><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%; background:'+color+';"></div></div><span class="val">'+val+'</span></div>';
+  }
+  function openDetail(id){
+    const t = state.collection.find(x=>x.id===id); if (!t) return;
+    detailTarget = t;
+    $('#det-sprite').innerHTML = spriteMarkup(t); $('#det-name').textContent = t.name;
+    $('#det-sub').textContent = 'Lv.'+t.level+' · CP '+t.cp+' · '+t.tier;
+    $('#det-stats').innerHTML = statBarRow('HP', t.hp, Math.max(t.maxHp,1), '#4dbf4d') + statBarRow('Attack', t.atk, 200, '#ff5470') +
+      statBarRow('Strength', t.strength, 200, '#ff8a3d') + statBarRow('Defense', t.def, 150, '#4d7cff') +
+      statBarRow('Speed', t.spd, 100, '#7b5cff') + statBarRow('Energy', t.energy, Math.max(t.maxEnergy,1), '#00c2a8');
+    const cap = TIER_CAP[t.tier]; const maxed = t.cp >= cap; const cost = powerUpCost(t);
+    $('#det-msg').textContent = maxed ? 'Max level for this tier!' : ('Power Up cost: ⚡ '+cost);
+    $('#btn-power-up').disabled = maxed; $('#btn-power-up').textContent = maxed ? '★ MAX LEVEL' : '⚡ Power Up';
+    $('#detail-modal').classList.add('active');
+  }
+  $$('[data-close-det]').forEach(x=> x.onclick = ()=> $('#detail-modal').classList.remove('active'));
+  $('#btn-power-up').onclick = ()=>{
+    if (!detailTarget) return;
+    const cost = powerUpCost(detailTarget);
+    if (state.energy < cost){ $('#det-msg').textContent = 'Not enough energy! Need ⚡ '+cost; return; }
+    state.energy -= cost; applyPowerUp(detailTarget);
+    refreshHUD(); markDirty(); saveNow(false);
+    openDetail(detailTarget.id);
+    showToast(detailTarget.name+' leveled up to Lv.'+detailTarget.level+'!');
+  };
+
+  // ---------------- ADMIN ----------------
+  $$('.admin-btn[data-give]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const t = makeToto(btn.dataset.give); state.collection.push(t);
+      showToast('Admin: added '+t.name+' ('+btn.dataset.give+')');
+      renderCollection(); refreshHUD(); markDirty(); saveNow(false);
+    };
+  });
+  $('#btn-admin-energy').onclick = ()=>{ state.energy += 1000000; refreshHUD(); markDirty(); saveNow(false); showToast('Admin: +1,000,000 energy'); };
+
+  $('#btn-leaderboard').onclick = ()=>{ $('#leaderboard-modal').classList.add('active'); loadLeaderboard(); };
+  $('[data-close-leaderboard]').onclick = ()=> $('#leaderboard-modal').classList.remove('active');
+
+  // ---------------- LOGOUT ----------------
+  $('#btn-logout').onclick = async ()=>{
+    await saveNow(true); stopAutosave();
+    await forgetRememberedEmail();
+    try { if (watchId!==null) navigator.geolocation.clearWatch(watchId); } catch(e){}
+    watchId=null;
+    state.loggedIn = false; showScreen('auth'); showToast('Logged out — progress saved.');
+  };
+
+  // ================= BATTLE SETUP: mode select -> lobby -> countdown =================
+  let pendingBattle = null; // {type, wildToto|gym|shrine}
+  function openBattleSetup(ctx){
+    if (state.collection.length===0){ showToast('You need a Toto to battle with first!'); return; }
+    pendingBattle = ctx;
+    if (ctx.type==='catch'){ renderCountdownStep('Wild Toto approaching!', ()=> launchBattle({mode:'catch', opponent: ctx.wildToto, allies:[]})); }
+    else if (ctx.type==='gym'){ renderModeSelectStep({ name: ctx.gym.name, boss: ctx.gym.boss, label:'Champion' }); }
+    else { renderModeSelectStep({ name: ctx.shrine.name, boss: ctx.shrine.guardian, label:'Guardian' }); }
+    $('#setup-modal').classList.add('active');
+  }
+  function closeSetup(){ $('#setup-modal').classList.remove('active'); pendingBattle=null; }
+
+  function renderModeSelectStep(target){
+    $('#setup-card').innerHTML =
+      '<div class="setup-title">'+target.name+'</div>'+
+      '<div class="setup-sub">'+target.label+': '+target.boss.name+' · CP '+target.boss.cp+' · '+target.boss.tier+'</div>'+
+      '<div class="mode-options">'+
+        '<div class="mode-card" id="mode-solo"><div class="mi">🧍</div><div class="mn">Solo Battle</div></div>'+
+        '<div class="mode-card" id="mode-group"><div class="mi">👥</div><div class="mn">Group Battle</div></div>'+
+      '</div>'+
+      '<div class="btn-row"><button class="btn-cancel" id="setup-cancel" style="width:100%;">Cancel</button></div>';
+    $('#mode-solo').onclick = ()=>{
+      renderCountdownStep('Preparing solo battle…', ()=> launchBattle({mode:'solo', opponent: target.boss, allies:[], shrineName: target.name}));
+    };
+    $('#mode-group').onclick = ()=> renderLobbyStep(target);
+    $('#setup-cancel').onclick = closeSetup;
+  }
+  function renderLobbyStep(target){
+    let joined = 1, maxSlots = 4, secondsLeft = 14;
+    $('#setup-card').innerHTML =
+      '<div class="setup-title">Group Battle Lobby</div>'+
+      '<div class="setup-sub">'+target.name+' · waiting for trainers…</div>'+
+      '<div class="lobby-count" id="lobby-count">1/'+maxSlots+' ready</div>'+
+      '<div class="lobby-list" id="lobby-list"></div>'+
+      '<div class="setup-sub" id="lobby-timer">Starting in '+secondsLeft+'s</div>'+
+      '<div class="btn-row"><button class="btn-cancel" id="lobby-cancel">Leave</button><button class="btn-catch" id="lobby-start">Start Now</button></div>';
+    function renderSlots(){
+      const el = $('#lobby-list'); el.innerHTML='';
+      for (let i=0;i<maxSlots;i++){
+        const filled = i<joined;
+        el.insertAdjacentHTML('beforeend', '<div class="lobby-slot'+(filled?' filled':'')+'">'+(filled?(i===0?'🧙':['🧟','🧛','🕵️'][i%3]):'?')+'</div>');
+      }
+      $('#lobby-count').textContent = joined+'/'+maxSlots+' ready';
+    }
+    renderSlots();
+    const joinTimer = setInterval(()=>{ if (joined<maxSlots){ joined++; renderSlots(); } }, 2600);
+    const tickTimer = setInterval(()=>{
+      secondsLeft--; $('#lobby-timer').textContent = 'Starting in '+secondsLeft+'s';
+      if (secondsLeft<=0){ start(); }
+    }, 1000);
+    function start(){
+      clearInterval(joinTimer); clearInterval(tickTimer);
+      const allySprites = ['🧟','🧛','🕵️'];
+      const allies = Array.from({length: Math.max(0, joined-1)}).map((_,i)=>({ sprite: allySprites[i%allySprites.length], hp:100 }));
+      renderCountdownStep('Group assembled! Preparing battle…', ()=> launchBattle({mode:'group', opponent: target.boss, allies, shrineName: target.name}));
+    }
+    $('#lobby-start').onclick = start;
+    $('#lobby-cancel').onclick = ()=>{ clearInterval(joinTimer); clearInterval(tickTimer); closeSetup(); };
+  }
+  function renderCountdownStep(label, onDone){
+    $('#setup-card').innerHTML = '<div class="setup-title">'+label+'</div><div class="countdown-num" id="cd-num">3</div><div class="setup-sub">Get your Toto ready…</div>';
+    let n = 3;
+    const t = setInterval(()=>{
+      n--;
+      if (n<=0){ clearInterval(t); $('#cd-num').textContent='GO!'; setTimeout(()=>{ closeSetup(); onDone(); }, 350); }
+      else { $('#cd-num').textContent = n; }
+    }, 700);
+  }
+
+  // ================= BATTLE SCREEN =================
+  let battle = null;
+  // Percentage-based mitigation with a per-hit cap, instead of flat atk-minus-def — this is
+  // what keeps a fight from being decided in one or two hits when CP levels are far apart,
+  // and lets us deliberately pace gym/challenger raids to run longer than a wild scuffle.
+  function damageCapPct(mode){
+    if (mode==='catch') return 0.34;
+    if (mode==='challenge') return 0.11;
+    return 0.15; // gym raids (solo/group)
+  }
+  function computeDamage(attackPower, defenderDef, defenderMaxHp, capPct){
+    const mitigated = attackPower * (70/(70+defenderDef));
+    let dmg = mitigated * (0.85 + Math.random()*0.3);
+    dmg = Math.min(dmg, defenderMaxHp*capPct);
+    return Math.max(2, Math.round(dmg));
+  }
+  function fighterFromToto(t){
+    return { ref:t, name:t.name, sprite:spriteMarkup(t), level:t.level, cp:t.cp, tier:t.tier, maxHp:t.maxHp, hp:t.maxHp, atk:t.atk, strength:t.strength, def:t.def, spd:t.spd, maxEnergy:t.maxEnergy, energy:t.maxEnergy, isToni:!!t.isToni };
+  }
+  function strongestToto(){ return state.collection.length ? state.collection.slice().sort((a,b)=>b.cp-a.cp)[0] : null; }
+
+  function launchBattle(opts){
+    const lead = strongestToto(); if (!lead) return;
+    const enemyFighter = fighterFromToto(opts.opponent);
+    // Gym champions and especially Challenger guardians fight tougher than their catchable
+    // stats — this only affects the battle copy, so the Toto you actually catch afterward
+    // has completely normal health for its tier, not this temporary raid buff.
+    if (opts.mode==='solo' || opts.mode==='group'){ enemyFighter.maxHp = Math.round(enemyFighter.maxHp*1.6); enemyFighter.hp = enemyFighter.maxHp; }
+    else if (opts.mode==='challenge'){ enemyFighter.maxHp = Math.round(enemyFighter.maxHp*2.4); enemyFighter.hp = enemyFighter.maxHp; }
+    battle = { mode:opts.mode, shrineName:opts.shrineName||null, player:fighterFromToto(lead), enemy:enemyFighter, opponentTemplate:opts.opponent, allies:opts.allies||[], group:(opts.allies&&opts.allies.length>0), over:false, timers:{} };
+    $('#battle-title').textContent = opts.mode==='catch' ? 'Wild Encounter' : (opts.shrineName ? (opts.shrineName+' Raid') : 'Raid');
+    $('#battle-stage').className = 'battle-stage ' + (opts.mode==='catch' ? 'theme-catch' : 'theme-raid');
+    spawnEmbers();
+    $('#btn-swap-toto').style.display = state.collection.length>1 ? 'inline-block' : 'none';
+    const row = $('#ally-row'); row.innerHTML='';
+    battle.allies.forEach(ally=>{
+      const chip = document.createElement('div'); chip.className='ally-chip';
+      chip.innerHTML = '<span class="as">'+ally.sprite+'</span><div class="ally-hp-track"><div class="ally-hp-fill" style="width:100%;"></div></div>';
+      row.appendChild(chip);
+    });
+    renderBattle();
+    $('#battle-screen').classList.add('active');
+    startBattleTimers();
+  }
+  function spawnEmbers(){
+    const stage = $('#battle-stage');
+    $$('.ember', stage).forEach(e=>e.remove());
+    for (let i=0;i<6;i++){
+      const e = document.createElement('div'); e.className='ember'; e.textContent = Math.random()<0.5 ? '✨':'🍂';
+      e.style.left = (10+Math.random()*80)+'%'; e.style.animationDuration = (4+Math.random()*4)+'s'; e.style.animationDelay = (Math.random()*3)+'s';
+      stage.appendChild(e);
+    }
+  }
+  function renderBattle(){
+    if (!battle) return;
+    const p=battle.player, e=battle.enemy;
+    $('#bf-p-name').textContent=p.name; $('#bf-p-cp').textContent='CP '+p.cp; $('#bf-p-level').textContent='Lv.'+p.level; $('#bf-p-sprite').innerHTML=p.sprite;
+    $('#bf-p-sprite').classList.toggle('toni-glow', !!p.isToni);
+    $('#bf-p-hp').style.width=Math.max(0,(p.hp/p.maxHp*100))+'%'; $('#bf-p-nrg').style.width=Math.max(0,(p.energy/p.maxEnergy*100))+'%';
+    $('#bf-e-name').textContent=e.name; $('#bf-e-cp').textContent='CP '+e.cp; $('#bf-e-level').textContent=e.tier; $('#bf-e-sprite').innerHTML=e.sprite;
+    $('#bf-e-sprite').classList.toggle('toni-glow', !!e.isToni);
+    $('#bf-e-hp').style.width=Math.max(0,(e.hp/e.maxHp*100))+'%';
+  }
+  function battleLog(msg){ $('#battle-log').textContent = msg; }
+  function flashSprite(who){ const el = who==='p' ? $('#bf-p-sprite') : $('#bf-e-sprite'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
+  function popDamage(who, val, color){
+    const anchor = who==='p' ? $('#bf-p-sprite') : $('#bf-e-sprite');
+    const mid = $('#arena-mid'); const rect = anchor.getBoundingClientRect(); const parentRect = mid.getBoundingClientRect();
+    const span = document.createElement('div'); span.className='dmg-pop'; span.textContent='-'+Math.round(val); span.style.color=color;
+    span.style.left = (rect.left - parentRect.left + rect.width/2 - 10)+'px'; span.style.top = (rect.top - parentRect.top)+'px';
+    mid.appendChild(span); setTimeout(()=>span.remove(), 720);
+  }
+
+  function startBattleTimers(){
+    clearBattleTimers();
+    const enemyDelay = Math.max(500, 1500 - battle.enemy.spd*4);
+    battle.timers.enemyTimer = setInterval(()=>{
+      if (!battle || battle.over) return;
+      let dmg = computeDamage(battle.enemy.atk+battle.enemy.strength, battle.player.def, battle.player.maxHp, damageCapPct(battle.mode));
+      if (battle.group) dmg = Math.round(dmg*0.6);
+      battle.player.hp = Math.max(0, battle.player.hp - dmg);
+      flashSprite('p'); popDamage('p', dmg, '#ff5470'); renderBattle();
+      battleLog(battle.enemy.name+' hits for '+dmg+'!');
+      if (battle.player.hp<=0) endBattle(false);
+    }, enemyDelay);
+    battle.timers.regenTimer = setInterval(()=>{ if (!battle||battle.over) return; battle.player.energy = Math.min(battle.player.maxEnergy, battle.player.energy+2); renderBattle(); }, 1000);
+    if (battle.group){
+      battle.timers.allyTimer = setInterval(()=>{
+        if (!battle||battle.over) return;
+        battle.allies.forEach((ally,i)=>{
+          if (ally.hp<=0) return;
+          const dmg = 4+Math.random()*5;
+          battle.enemy.hp = Math.max(0, battle.enemy.hp-dmg);
+          ally.hp = Math.max(0, ally.hp-(2+Math.random()*4));
+          const fill = $('#ally-row').children[i] && $('#ally-row').children[i].querySelector('.ally-hp-fill');
+          if (fill) fill.style.width = ally.hp+'%';
+        });
+        renderBattle();
+        if (battle.enemy.hp<=0) endBattle(true);
+      }, 900);
+    }
+  }
+  function clearBattleTimers(){ if (!battle) return; Object.values(battle.timers).forEach(t=>t&&clearInterval(t)); battle.timers={}; }
+
+  $('#btn-attack').onclick = ()=>{
+    if (!battle || battle.over) return;
+    const cost = 10; let weak=false;
+    if (battle.player.energy < cost) weak=true; else battle.player.energy -= cost;
+    let dmg = computeDamage(battle.player.atk+battle.player.strength, battle.enemy.def, battle.enemy.maxHp, damageCapPct(battle.mode));
+    if (weak) dmg = Math.round(dmg*0.35);
+    battle.enemy.hp = Math.max(0, battle.enemy.hp-dmg);
+    flashSprite('e'); popDamage('e', dmg, '#fff'); renderBattle();
+    battleLog(weak ? 'Low energy! Weak hit for '+dmg+'.' : 'You strike for '+dmg+'!');
+    if (battle.enemy.hp<=0) endBattle(true);
+  };
+  $('#btn-swap-toto').onclick = ()=>{
+    if (!battle) return;
+    const sorted = state.collection.slice().sort((a,b)=>b.cp-a.cp);
+    const curIdx = sorted.findIndex(t=>t.id===battle.player.ref.id);
+    const next = sorted[(curIdx+1)%sorted.length];
+    battle.player = fighterFromToto(next); renderBattle(); battleLog('Sent out '+next.name+'!');
+  };
+  function endBattle(won){
+    if (!battle || battle.over) return;
+    battle.over = true; clearBattleTimers();
+    if (won){
+      state.collection.push(battle.opponentTemplate);
+      battleLog('Victory! '+battle.opponentTemplate.name+(battle.mode==='catch'?' was caught!':' joined you!'));
+      showToast(battle.mode==='catch' ? ('Caught '+battle.opponentTemplate.name+'!') : ('Raid won! '+battle.opponentTemplate.name+' joined you.'));
+      renderCollection(); refreshHUD(); markDirty(); saveNow(false);
+    } else {
+      battleLog(battle.mode==='catch' ? (battle.opponentTemplate.name+' got away!') : 'Your Toto was defeated — retreat!');
+      showToast('Defeated — better luck next time.');
+    }
+    setTimeout(()=>{ $('#battle-screen').classList.remove('active'); battle=null; }, 900);
+  }
+  $('#btn-retreat').onclick = ()=>{ if (battle){ clearBattleTimers(); battle=null; } $('#battle-screen').classList.remove('active'); };
+
+  // ---------------- BOOT: stay logged in until an explicit Logout ----------------
+  (async function bootstrap(){
+    const sub = document.querySelector('#toto-root .logo-sub');
+    const original = sub ? sub.textContent : '';
+    if (sub) sub.textContent = 'Restoring your session…';
+    const found = await tryAutoLogin();
+    if (!found && sub) sub.textContent = original;
+  })();
+
+})();
+</script>
+
+<div id="tq-update-banner">🔄 A new version of TotoQuest is available — tap to update</div>
+<style>
+  #tq-update-banner.updating { background:linear-gradient(135deg,#4d7cff,#7b5cff); cursor:default; }
+  #tq-update-banner.updated { background:linear-gradient(135deg,#4dbf4d,#2e9e2e); cursor:default; }
+</style>
+<script>
+(function(){
+  if (!('serviceWorker' in navigator)) return;
+  var banner = document.getElementById('tq-update-banner');
+  var refreshing = false;
+
+  function checkNow(reg){ if (reg) reg.update().catch(function(){}); }
+
+  navigator.serviceWorker.register('sw.js').then(function(reg){
+    checkNow(reg);
+    document.addEventListener('visibilitychange', function(){
+      if (document.visibilityState === 'visible') checkNow(reg);
+    });
+    window.addEventListener('focus', function(){ checkNow(reg); });
+    window.addEventListener('pageshow', function(){ checkNow(reg); });
+    // Standalone/home-screen launches don't always fire visibilitychange reliably on
+    // every platform, so also poll periodically while the app is open.
+    setInterval(function(){ checkNow(reg); }, 45000);
+
+    function trackInstalling(worker){
+      worker.addEventListener('statechange', function(){
+        if (worker.state === 'installed' && navigator.serviceWorker.controller){
+          banner.classList.add('show');
+        }
+      });
+    }
+    if (reg.waiting && navigator.serviceWorker.controller) banner.classList.add('show');
+    if (reg.installing) trackInstalling(reg.installing);
+    reg.addEventListener('updatefound', function(){ trackInstalling(reg.installing); });
+  }).catch(function(e){ console.log('SW registration skipped:', e); });
+
+  navigator.serviceWorker.addEventListener('controllerchange', function(){
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
+
+  banner.addEventListener('click', function(){
+    if (banner.dataset.busy === '1') return; // ignore repeat taps mid-update
+    banner.dataset.busy = '1';
+    banner.classList.add('updating');
+    banner.textContent = '🔄 Updating… hang tight';
+
+    var finished = false;
+    function finishAndReload(){
+      if (finished) return;
+      finished = true;
+      banner.classList.remove('updating');
+      banner.classList.add('updated');
+      banner.textContent = '✅ Updated! Restarting the app…';
+      setTimeout(function(){ window.location.reload(); }, 700);
+    }
+
+    try {
+      navigator.serviceWorker.getRegistration().then(function(reg){
+        if (reg && reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+        setTimeout(finishAndReload, 900);
+      }).catch(finishAndReload);
+    } catch(e){ finishAndReload(); }
+    // Absolute last-resort fallback so a tap can never end up doing nothing.
+    setTimeout(finishAndReload, 3000);
+  });
+})();
+</script>
+</body>
+</html>
