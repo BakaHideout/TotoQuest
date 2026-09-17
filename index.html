@@ -738,7 +738,7 @@
   // shared leaderboard for the downloaded/GitHub-hosted version too — see the README in
   // the app bundle for the 2-minute setup. Leave it blank to keep current behavior
   // (shared only when played through the hosted Claude link).
-  const FIREBASE_DB_URL = ''; // e.g. 'https://your-project-default-rtdb.firebaseio.com'
+  const FIREBASE_DB_URL = ''; // e.g. 'https://totoquest-leaderboards-default-rtdb.firebaseio.com/'
   function firebaseKeyFor(email){ return email.replace(/[.#$\[\]/]/g, '_'); }
   async function rawGet(key){
     if (hasCloudStorage){
