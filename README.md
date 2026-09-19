@@ -27,32 +27,48 @@ Technical note: this works because `sw.js` includes a version string
 changes, so simply changing that version string (or any other file) is enough to
 trigger the update banner for everyone — you don't need to do anything extra.
 
-## Turning on a real cross-device leaderboard (free, ~2 minutes)
+## Turning on a real cross-device leaderboard (free, ~2 minutes, uses your existing GitHub account)
 By default, the leaderboard in this downloaded/GitHub-hosted copy can only show your
 own power level — a static site has no server of its own to share scores between
-devices. To turn on a real shared leaderboard for everyone who plays your hosted copy:
+devices. To turn on a real shared leaderboard, the game stores `leaderboard.json`
+right in the same GitHub repo you're already using to host it — no new account or
+service needed:
 
-1. Go to https://console.firebase.google.com, sign in with any Google account, and
-   click **Add project** (you can skip Google Analytics — not needed). Free tier,
-   no credit card required.
-2. In your new project, open **Build → Realtime Database** in the left sidebar, click
-   **Create Database**, choose any location, and start in **test mode** (this makes it
-   publicly readable/writable, which is fine for a casual game leaderboard among
-   friends — don't put anything sensitive in it).
-3. Copy the database URL shown at the top — it looks like
-   `https://your-project-default-rtdb.firebaseio.com`.
-4. Open `index.html` in this folder, find this line near the top of the `<script>`
+1. On GitHub, go to **Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token**.
+2. Give it a name, set **Repository access** to "Only select repositories" and pick
+   this game's repo, then under **Permissions → Repository permissions**, set
+   **Contents** to **Read and write**. Generate the token and copy it — GitHub only
+   shows it once.
+3. Open `index.html` in this folder, find these lines near the top of the `<script>`
    block:
    ```
-   const FIREBASE_DB_URL = '';
+   const GITHUB_LB_OWNER = '';
+   const GITHUB_LB_REPO = '';
+   const GITHUB_LB_TOKEN = '';
    ```
-   and paste your URL between the quotes:
+   and fill them in:
    ```
-   const FIREBASE_DB_URL = 'https://your-project-default-rtdb.firebaseio.com';
+   const GITHUB_LB_OWNER = 'yourusername';
+   const GITHUB_LB_REPO = 'your-repo-name';
+   const GITHUB_LB_TOKEN = 'github_pat_...';
    ```
-5. Save, push to GitHub. Once players update to that version, the leaderboard is
-   shared across every device automatically.
+4. Save, push to GitHub. Once players update to that version, the leaderboard is
+   shared across every device automatically — the game creates `leaderboard.json`
+   in your repo the first time anyone's power level updates.
 
-Test mode leaves the database open to anyone with the URL — fine for a small game
-among friends, but if you want it locked down later, Firebase's Realtime Database
-security rules can restrict writes to only the `leaderboard/` path.
+Security note: that token is embedded in client-side code, so anyone determined
+enough could extract it from their browser's dev tools. Scoping it (step 2) to
+**only this one repo** with **only Contents read/write** limits the damage to "someone
+could mess with your leaderboard file," not your account or other repos — reasonable
+for a casual game among friends, not something to reuse for anything sensitive.
+
+## About the Candy & Dust store
+The in-game store links out to `paypal.me/TotoQuest` for each purchase tier, then asks
+the player to confirm they've paid before crediting the currency. This is an **honor
+system** — a static site has no way to verify a PayPal payment actually happened
+(no webhook, no callback, nothing server-side to check). Anyone could tap "I've Paid"
+without paying. That's a hard limitation of not having a real payment backend, not a
+bug — if you want an unspoofable version later, it would need a small server (or a
+serverless function) that verifies the payment with PayPal's API before crediting
+anything, which is a bigger project than a static GitHub Pages site can do alone.
