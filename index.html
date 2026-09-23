@@ -151,15 +151,15 @@
 
   /* world-tilt holds ONLY the camera tilt (rotateX), independent of pan/rotate/zoom below it —
      this keeps tilting consistent no matter which way you're facing. */
-  .world-tilt { position:absolute; inset:0; transform-style: preserve-3d; }
+  .world-tilt { position:absolute; inset:0; transform-style: preserve-3d; will-change:transform; }
   /* world-pan handles ONLY the walking-driven pan, keeping your current real position
      centered on screen. world (inside it) handles ONLY rotate/zoom, pivoting around
      your current position (set dynamically in JS) rather than the map's fixed origin —
      this is what keeps rotating from ever appearing to teleport you elsewhere. */
-  .world-pan { position:absolute; left:50%; top:58%; width:26000px; height:26000px; transform: translate(-50%,-50%); }
-  .world { position:absolute; left:0; top:0; width:26000px; height:26000px; will-change:transform;
+  .world-pan { position:absolute; left:50%; top:58%; width:26000px; height:26000px; transform: translate(-50%,-50%); will-change:transform; }
+  .world { position:absolute; left:0; top:0; width:26000px; height:26000px; will-change:transform; contain:layout paint;
     background: radial-gradient(circle at 50% 50%, var(--grass1) 0%, var(--grass2) 55%, #22322f 100%); }
-  #terrain-svg { position:absolute; left:0; top:0; width:26000px; height:26000px; pointer-events:none; }
+  #terrain-svg { position:absolute; left:0; top:0; width:26000px; height:26000px; pointer-events:none; contain:layout paint; }
   .deco { position:absolute; pointer-events:none; contain:layout style; }
   .deco.candy-corn-pickup { pointer-events:auto; cursor:pointer; }
   .deco .counter-rot { display:inline-block; transform: translate(-50%,-100%) rotate(calc(-1 * var(--rot,0deg))); }
@@ -767,6 +767,13 @@
   function standingCreature(c){
     return '<svg class="creature-svg" viewBox="0 0 100 112" xmlns="http://www.w3.org/2000/svg">'
       + '<ellipse cx="50" cy="105" rx="27" ry="5" fill="rgba(0,0,0,0.22)"/>'
+      // Small bat wings behind every standing creature — regardless of its element, this is
+      // what reads instantly as "Halloween monster" rather than "colored elemental blob".
+      // Bold, jagged, high-contrast silhouette on purpose: at the ~34px size these render
+      // on the map, soft/detailed shapes disappear, but a simple dark zigzag flare reads
+      // clearly as "wings" even that small.
+      + '<path d="M30,64 L3,28 L19,52 L1,60 L14,66 L2,74 L22,70 Z" fill="#1a1420" opacity="0.92"/>'
+      + '<path d="M70,64 L97,28 L81,52 L99,60 L86,66 L98,74 L78,70 Z" fill="#1a1420" opacity="0.92"/>'
       + '<ellipse cx="35" cy="97" rx="9" ry="6" fill="'+c.leg+'" class="cr-leg cr-legL"/>'
       + '<ellipse cx="65" cy="97" rx="9" ry="6" fill="'+c.leg+'" class="cr-leg cr-legR"/>'
       + '<ellipse cx="50" cy="74" rx="25" ry="23" fill="'+c.body+'" stroke="'+c.stroke+'" stroke-width="2.5"/>'
@@ -786,6 +793,10 @@
   function quadrupedCreature(c){
     return '<svg class="creature-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">'
       + '<ellipse cx="52" cy="93" rx="32" ry="5" fill="rgba(0,0,0,0.22)"/>'
+      // Same idea on the four-legged template: bold, jagged, dark wing silhouette that
+      // survives shrinking down to marker size.
+      + '<path d="M42,52 L18,18 L34,42 L14,32 L18,50 L4,44 L16,58 Z" fill="#1a1420" opacity="0.92"/>'
+      + '<path d="M62,52 L86,18 L70,42 L90,32 L86,50 L100,44 L88,58 Z" fill="#1a1420" opacity="0.92"/>'
       + '<ellipse cx="26" cy="81" rx="6" ry="10" fill="'+c.leg+'" class="cr-leg cr-legL"/>'
       + '<ellipse cx="43" cy="84" rx="6" ry="9" fill="'+c.leg+'"/>'
       + '<ellipse cx="60" cy="84" rx="6" ry="9" fill="'+c.leg+'"/>'
@@ -1019,20 +1030,24 @@
     + '</svg>';
   // Hand-painted witch art replaces the old inline SVGs: a front-facing portrait for
   // menus/HUD/profile/character-confirm, and a from-behind pose for the on-map marker,
-  // since the game camera follows the player from over-the-shoulder.
+  // since the game camera follows the player from over-the-shoulder. Small ("Sm") variants
+  // are pre-downscaled copies for spots that only ever show the art at ~30-70px — using
+  // those instead of decoding the full char-confirm-screen-sized image in a dozen places
+  // (HUD chip, profile, leaderboard rows, the on-map marker) was one of the easy wins for
+  // the general sluggishness.
   const AVATAR_IMG = {
-    female: { front:'assets/girl-front.png', back:'assets/girl-back.png' },
-    male:   { front:'assets/boy-front.png',  back:'assets/boy-back.png' }
+    female: { front:'assets/girl-front.png', back:'assets/girl-back.png', frontSm:'assets/girl-front-sm.png', backSm:'assets/girl-back-sm.png' },
+    male:   { front:'assets/boy-front.png',  back:'assets/boy-back.png',  frontSm:'assets/boy-front-sm.png',  backSm:'assets/boy-back-sm.png' }
   };
-  function frontAvatarMarkup(gender){
+  function frontAvatarMarkup(gender, small){
     const g = gender==='male' ? 'male' : 'female';
-    return '<img class="player-avatar-svg" src="'+AVATAR_IMG[g].front+'" alt="'+g+' witch" draggable="false">';
+    return '<img class="player-avatar-svg" src="'+(small?AVATAR_IMG[g].frontSm:AVATAR_IMG[g].front)+'" alt="'+g+' witch" draggable="false">';
   }
-  function backAvatarMarkup(gender){
+  function backAvatarMarkup(gender, small){
     const g = gender==='male' ? 'male' : 'female';
-    return '<img class="player-avatar-svg" src="'+AVATAR_IMG[g].back+'" alt="'+g+' witch, seen from behind" draggable="false">';
+    return '<img class="player-avatar-svg" src="'+(small?AVATAR_IMG[g].backSm:AVATAR_IMG[g].back)+'" alt="'+g+' witch, seen from behind" draggable="false">';
   }
-  function playerAvatarMarkup(gender){ return frontAvatarMarkup(gender); } // kept for any old call sites — portrait view
+  function playerAvatarMarkup(gender, small){ return frontAvatarMarkup(gender, small); } // kept for any old call sites — portrait view
   // The trick-or-treat costume worn on the map itself (matches the reference art) — your
   // chosen trainer look still shows in the avatar badge, profile, and character select.
   const PLAYER_GHOST_COSTUME_SVG = '<svg class="player-avatar-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">'
@@ -1340,7 +1355,12 @@
     const existing = await loadProfileByEmail(email);
     if (existing){ $('#reg-error').textContent='Account already exists — log in instead.'; return; }
     $('#reg-error').textContent='';
-    state = { loggedIn:true, username, email, gender, age: age||'—', avatar: gender==='male'?'male':'female', candy:150, gems:20, coins:0, collection:[], geo:null, activeTab:'map', viaGoogle: !!viaGoogle };
+    // Merge into the existing state object rather than replacing it outright — if the
+    // loading screen already got a GPS fix and started fetching the map for this spot
+    // (see runLoadingSequence), that in-flight/loaded world data lives on the state
+    // object too, and replacing state wholesale used to throw it all away and start over
+    // right as you reached the map, which was a chunk of the "lag" getting into a new game.
+    Object.assign(state, { loggedIn:true, username, email, gender, age: age||'—', avatar: gender==='male'?'male':'female', candy:150, gems:20, coins:0, collection:[], activeTab:'map', viaGoogle: !!viaGoogle });
     const ok = await saveNow(true);
     await rememberEmail(email);
     if (!ok) $('#reg-error').textContent = 'Could not reach save storage — you can still play, it will retry automatically.';
@@ -1388,7 +1408,7 @@
   };
 
   async function enterGame(isNew){
-    const avFront = frontAvatarMarkup(state.avatar), avBack = backAvatarMarkup(state.avatar);
+    const avFront = frontAvatarMarkup(state.avatar, true), avBack = backAvatarMarkup(state.avatar, true);
     $('#hud-avatar').innerHTML = avFront; $('#player-avatar').innerHTML = avBack; $('#profile-avatar').innerHTML = avFront;
     $('#avatar-corn-l').innerHTML = CANDY_ICON; $('#avatar-corn-r').innerHTML = CANDY_ICON;
     $('#profile-name').textContent = state.username;
@@ -1396,9 +1416,12 @@
     $('#admin-panel').style.display = (state.email && state.email.toLowerCase()===ADMIN_EMAIL) ? 'block' : 'none';
     showScreen('game');
     refreshHUD(); renderCollection(); startAutosave(); spawnClouds();
-    // Build the world right away with a placeholder location so Totos/gyms/battle always
-    // work even if GPS is unavailable or blocked — then try to upgrade to your real position.
-    setAnchorAndBuild(DEFAULT_LAT, DEFAULT_LON);
+    // If the loading screen already got a real GPS fix and started building the world
+    // around it (see runLoadingSequence), state.geoAnchor is already set here — reuse it
+    // instead of wiping and rebuilding from the DEFAULT fallback, so the roads/buildings
+    // that have been loading in the background this whole time are still there.
+    if (!state.geoAnchor) setAnchorAndBuild(DEFAULT_LAT, DEFAULT_LON);
+    else applyWorldTransform();
     locate();
     startLocateRetries();
     await saveNow(true);
@@ -1467,7 +1490,7 @@
     if (!rows.length){ list.innerHTML = '<p style="color:#999; font-weight:700; font-size:12.5px;">No trainers on the board yet.</p>'; return; }
     list.innerHTML = rows.map((r,i)=>{
       const isMe = r.email===state.email;
-      const av = playerAvatarMarkup(r.avatar);
+      const av = playerAvatarMarkup(r.avatar, true);
       return '<div class="toto-card" style="display:flex; align-items:center; gap:10px; text-align:left; margin-bottom:8px;'+(isMe?' border:2px solid #ff8a3d;':'')+'">'+
         '<div style="font-weight:800; width:22px;">'+(i+1)+'</div>'+
         '<div style="width:22px; height:26px; overflow:hidden;">'+av+'</div>'+
@@ -1515,6 +1538,32 @@
     // Every Toto/gym/tree marker counter-rotates against this so they always stay upright
     // and face you, no matter which way the camera is currently turned.
     $('#world').style.setProperty('--rot', state.cameraRotate+'deg');
+    updatePlayerFacing();
+  }
+  // We only have two painted poses per character (front/back) — no true left/right profile
+  // art — so "seeing every angle as you turn the camera" is approximated rather than a real
+  // 3D turnaround: the circle is split into four 90° arcs alternating back / front /
+  // front(mirrored) / back(mirrored), so turning all the way around visibly cycles through
+  // a different silhouette each quarter-turn instead of the character staying frozen facing
+  // one way. It's a deliberate trade-off given the source art; true 8-directional sprites
+  // (or a real side-view painting) would replace this cleanly if that art ever exists.
+  let _facing = { front:null, mirror:null, gender:null };
+  function updatePlayerFacing(){
+    const holder = document.getElementById('player-avatar');
+    const img = holder && holder.querySelector('img');
+    if (!img) return;
+    const g = state.avatar==='male' ? 'male' : 'female';
+    const a = ((state.cameraRotate%360)+360)%360;
+    const showFront = a > 90 && a < 270;
+    const mirror = a > 180;
+    if (_facing.front !== showFront || _facing.gender !== g){
+      img.src = showFront ? AVATAR_IMG[g].frontSm : AVATAR_IMG[g].backSm;
+      _facing.front = showFront; _facing.gender = g;
+    }
+    if (_facing.mirror !== mirror){
+      img.style.transform = mirror ? 'scaleX(-1)' : '';
+      _facing.mirror = mirror;
+    }
   }
   function setAnchorAndBuild(lat, lon){
     state.geo = {lat, lon}; state.geoAnchor = {lat, lon}; state.worldOffset = {x:0,y:0};
@@ -1737,7 +1786,8 @@
     compassTargetHeading = h;
   }
   function compassLoop(){
-    if (compassEnabled && compassTargetHeading!==null){
+    if (!compassEnabled){ compassRAF = null; return; } // stop spinning the RAF loop entirely once turned off, instead of ticking forever doing nothing
+    if (compassTargetHeading!==null){
       let diff = ((compassTargetHeading - state.cameraRotate + 540) % 360) - 180;
       if (Math.abs(diff) > 0.4){
         state.cameraRotate = (state.cameraRotate + diff*0.08 + 360) % 360;
@@ -2144,7 +2194,20 @@
     data.elements.forEach(el=>{
       if (!el.geometry || el.geometry.length<2) return;
       const t = el.tags || {};
-      const pts = el.geometry.map(pt=>{ const p = project(pt.lat, pt.lon); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+      // Very long ways (a river or a highway that runs the whole length of the query box)
+      // can carry hundreds of points — building a string from every single one of them is
+      // what was causing a noticeable stutter the moment a chunk's fetch landed, especially
+      // in dense areas. None of these shapes need sub-meter fidelity at this zoom level, so
+      // long ones are thinned out first; short ones (most buildings) are untouched.
+      let geom = el.geometry;
+      if (geom.length > 60){
+        const stride = Math.ceil(geom.length/60);
+        const thinned = [];
+        for (let i=0;i<geom.length;i+=stride) thinned.push(geom[i]);
+        if (thinned[thinned.length-1] !== geom[geom.length-1]) thinned.push(geom[geom.length-1]);
+        geom = thinned;
+      }
+      const pts = geom.map(pt=>{ const p = project(pt.lat, pt.lon); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
       if (t.natural==='water' || t.landuse==='reservoir'){
         waterParts.push('<polygon points="'+pts+'" fill="#3a4a78" stroke="#2a3660" stroke-width="3" opacity="0.9"/>');
       } else if (t.waterway==='river' || t.waterway==='stream'){
@@ -2801,10 +2864,24 @@
     const creepTimer = setInterval(()=> setProgress(progress + (progress<65?2.4:0.5)), 140);
 
     setProgress(12, 'Waking the pumpkins…');
+    // Kick off a real GPS fix AND, the moment it lands, start building the world at that
+    // spot immediately — the map's Overpass fetches begin right here on the loading
+    // screen, running in the background through the rest of signup/character-pick, so
+    // there's a real head start by the time you actually reach the game instead of the
+    // whole chunk-loading pipeline only starting once you tap through everything.
+    let primed = false;
+    function primeWorldIfPossible(lat, lon){
+      if (primed || state.geoAnchor) return;
+      primed = true;
+      setAnchorAndBuild(lat, lon);
+    }
     const gpsWarmup = new Promise(res=>{
       if (!navigator.geolocation){ res(); return; }
       try {
-        navigator.geolocation.getCurrentPosition(()=>res(), ()=>res(), {enableHighAccuracy:true, timeout:6000, maximumAge:60000});
+        navigator.geolocation.getCurrentPosition(
+          pos => { primeWorldIfPossible(pos.coords.latitude, pos.coords.longitude); res(); },
+          ()=>res(), {enableHighAccuracy:true, timeout:6000, maximumAge:60000}
+        );
       } catch(e){ res(); }
     });
     setProgress(30, 'Finding your street…');

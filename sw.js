@@ -1,7 +1,9 @@
-const CACHE_NAME = 'totoquest-v13';
+const CACHE_NAME = 'totoquest-v14';
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png',
   './assets/loading-bg.jpg', './assets/girl-front.png', './assets/girl-back.png',
-  './assets/boy-front.png', './assets/boy-back.png'];
+  './assets/boy-front.png', './assets/boy-back.png',
+  './assets/girl-front-sm.png', './assets/girl-back-sm.png',
+  './assets/boy-front-sm.png', './assets/boy-back-sm.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
