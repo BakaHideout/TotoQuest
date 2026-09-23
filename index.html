@@ -87,12 +87,29 @@
   .divider { display:flex; align-items:center; gap:10px; color:#b3a6cf; font-size:10.5px; font-weight:700; margin: 1px 0; }
   .divider::before, .divider::after { content:''; flex:1; height:1px; background:#e5ddf7; }
 
+  /* ---------- LOADING SCREEN ---------- */
+  .loading-wrap { position:relative; height:100%; width:100%; overflow:hidden; background:#14101f; }
+  .loading-bg-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 22%; }
+  .loading-overlay { position:absolute; inset:0; background:linear-gradient(to bottom, rgba(12,8,22,0.05) 0%, rgba(12,8,22,0.25) 45%, rgba(10,6,18,0.94) 88%, #0c0716 100%); }
+  .loading-content { position:absolute; left:0; right:0; bottom:38px; padding:0 30px; display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .loading-status { color:#ffd899; font-weight:800; font-size:11.5px; letter-spacing:0.5px; text-transform:uppercase; text-shadow:0 2px 4px rgba(0,0,0,0.6); min-height:14px; }
+  .loading-bar-track { width:100%; max-width:320px; height:15px; border-radius:10px; background:rgba(255,255,255,0.14); border:1.5px solid rgba(255,200,140,0.4); overflow:hidden; box-shadow: inset 0 2px 5px rgba(0,0,0,0.5); }
+  .loading-bar-fill { height:100%; width:2%; border-radius:10px; background:linear-gradient(90deg,#ff8a3d,#c85cff); transition: width 0.35s ease-out; box-shadow:0 0 12px rgba(255,140,60,0.75); }
+  .loading-pct { color:#fff; font-weight:800; font-size:12.5px; letter-spacing:0.4px; text-shadow:0 2px 4px rgba(0,0,0,0.6); }
+  .loading-tip { color:#e8dcff; font-weight:700; font-size:11.5px; text-align:center; text-shadow:0 2px 4px rgba(0,0,0,0.6); min-height:15px; transition: opacity 0.25s ease; }
+
+  /* ---------- CHARACTER PORTRAIT (post-signup confirmation) ---------- */
+  .char-portrait-frame { width:230px; height:300px; border-radius:22px; background:radial-gradient(circle at 50% 18%, rgba(255,179,71,0.28), rgba(123,92,255,0.08) 55%, rgba(0,0,0,0) 75%); display:flex; align-items:center; justify-content:center; padding:8px; position:relative; }
+  .char-portrait-frame::after { content:''; position:absolute; left:50%; bottom:6px; width:70%; height:16px; background:radial-gradient(closest-side, rgba(0,0,0,0.45), rgba(0,0,0,0) 80%); transform:translateX(-50%); }
+  .char-portrait-img { max-width:100%; max-height:100%; object-fit:contain; filter:drop-shadow(0 14px 16px rgba(0,0,0,0.5)); position:relative; z-index:1; }
+  .char-name-sub { color:#c9b8f5; font-size:12.5px; font-weight:700; text-align:center; }
+
   .char-wrap { height:100%; background: radial-gradient(circle at 50% 0%, #3a2b63, #120c1f 75%); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:24px; }
   .char-title { color:#fff; font-weight:800; font-size:20px; }
   .char-options { display:flex; gap:18px; }
   .char-card { width:130px; padding:14px; border-radius:18px; background:var(--panel); text-align:center; cursor:pointer; border:3px solid transparent; }
   .char-card.sel { border-color: var(--accent); transform: translateY(-4px); }
-  .player-avatar-svg { width:100%; height:100%; display:block; }
+  .player-avatar-svg { width:100%; height:100%; display:block; object-fit:contain; }
   .pandaqueen-img { width:1em; height:1.2em; object-fit:contain; vertical-align:middle; }
   .char-avatar { font-size:56px; } .char-avatar .player-avatar-svg { width:0.85em; height:1.19em; }
   .char-name { font-weight:800; font-size:13px; margin-top:6px; }
@@ -153,9 +170,13 @@
   .player-pin { position:absolute; left:50%; top:58%; transform: translate(-50%,-100%); z-index:15; text-align:center; }
   .player-ring { position:absolute; left:50%; bottom:6px; width:90px; height:90px; transform:translate(-50%,50%); border-radius:50%; border:2px solid rgba(255,150,60,0.65); background:radial-gradient(circle, rgba(255,150,60,0.22), rgba(255,90,40,0.05) 70%, transparent 75%); pointer-events:none; z-index:-1; }
   .player-shadow { width:26px; height:9px; border-radius:50%; background:rgba(0,0,0,0.28); margin:2px auto 0; }
-  .player-avatar { font-size:40px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); animation: bob 2.6s ease-in-out infinite; } .player-avatar .player-avatar-svg { width:0.85em; height:1.19em; }
+  .player-avatar { font-size:52px; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.25)); animation: bob 2.6s ease-in-out infinite; } .player-avatar .player-avatar-svg { width:0.85em; height:1.19em; }
   .player-avatar.walking { animation: bob 0.55s ease-in-out infinite; }
   @keyframes bob { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-4px);} }
+  /* Soft lit circle around the player, like a lantern pushing back the dark — purely
+     visual, sits above the terrain/decor but below the UI chrome. */
+  .fog-vignette { position:absolute; inset:0; z-index:8; pointer-events:none;
+    background: radial-gradient(circle at 50% 58%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 17%, rgba(8,4,16,0.55) 46%, rgba(6,3,13,0.88) 72%); }
 
   .toto-node, .gym-node { position:absolute; transform: translate(-50%,-100%); text-align:center; cursor:pointer; z-index:10; contain:layout style; }
   .node-spin { position:relative; z-index:2; transform: rotate(calc(-1 * var(--rot,0deg))); }
@@ -179,6 +200,7 @@
 
   .map-controls { position:absolute; right:14px; bottom:90px; z-index:20; display:flex; flex-direction:column; gap:8px; align-items:center; }
   .map-btn { width:42px; height:42px; border-radius:50%; background:var(--panel); border:none; font-size:17px; box-shadow:0 6px 14px rgba(0,0,0,0.25); cursor:pointer; }
+  .map-btn.compass-on { background:linear-gradient(135deg,#ff8a3d,#ff5f6d); box-shadow:0 0 0 3px rgba(255,140,60,0.4), 0 6px 14px rgba(0,0,0,0.3); }
   .gps-status { position:absolute; left:14px; bottom:152px; z-index:20; background:rgba(0,0,0,0.55); color:#fff; font-size:10px; font-weight:700; padding:6px 10px; border-radius:10px; max-width:220px; line-height:1.35; }
   .dpad { position:absolute; left:14px; bottom:197px; z-index:20; display:none; grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); gap:3px; }
   .dpad.show { display:grid; }
@@ -361,7 +383,21 @@
 <div id="toto-root">
 
   <!-- AUTH SCREEN -->
-  <div class="screen active" data-screen="auth">
+  <!-- LOADING SCREEN (shown first; gives GPS + the service worker a moment to warm up) -->
+  <div class="screen active" data-screen="loading">
+    <div class="loading-wrap">
+      <img class="loading-bg-img" src="assets/loading-bg.jpg" alt="TotoQuest">
+      <div class="loading-overlay"></div>
+      <div class="loading-content">
+        <div class="loading-status" id="loading-status">Summoning the map…</div>
+        <div class="loading-bar-track"><div class="loading-bar-fill" id="loading-bar-fill"></div></div>
+        <div class="loading-pct" id="loading-pct">2%</div>
+        <div class="loading-tip" id="loading-tip">Tip: Don't forget your magical items!</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen" data-screen="auth">
     <div class="auth-wrap">
       <div class="auth-glow"></div>
       <div class="auth-glow2"></div>
@@ -414,14 +450,12 @@
     </div>
   </div>
 
-  <!-- CHARACTER SELECT -->
+  <!-- CHARACTER CONFIRM (shows the witch matching the gender chosen at signup) -->
   <div class="screen" data-screen="char">
     <div class="char-wrap">
-      <div class="char-title">Choose your look</div>
-      <div class="char-options">
-        <div class="char-card sel" data-av="female" id="card-female"><div class="char-avatar">🧙‍♀️</div><div class="char-name">Female Trainer</div></div>
-        <div class="char-card" data-av="male" id="card-male"><div class="char-avatar">🧙‍♂️</div><div class="char-name">Male Trainer</div></div>
-      </div>
+      <div class="char-title" id="char-portrait-title">This is you…</div>
+      <div class="char-portrait-frame"><img class="char-portrait-img" id="char-portrait-img" src="" alt="your witch"></div>
+      <div class="char-name-sub" id="char-portrait-sub">Ready for the haunted streets?</div>
       <button class="btn-primary" style="width:100%;" id="btn-enter-world">Enter TotoQuest →</button>
     </div>
   </div>
@@ -472,6 +506,8 @@
             </div>
           </div>
         </div>
+        <div class="fog-vignette"></div>
+
         <div class="player-pin">
           <div class="player-ring"></div>
           <div class="player-avatar" id="player-avatar">🧙‍♀️</div>
@@ -483,7 +519,8 @@
           <button class="map-btn" id="btn-zoom-out" title="Zoom out">➖</button>
           <button class="map-btn" id="btn-rotate-l" title="Rotate left">↺</button>
           <button class="map-btn" id="btn-rotate-r" title="Rotate right">↻</button>
-          <button class="map-btn" id="btn-locate" title="Re-center on GPS">🧭</button>
+          <button class="map-btn" id="btn-compass" title="Turn camera with your phone's compass">🧭</button>
+          <button class="map-btn" id="btn-locate" title="Re-center on GPS">🎯</button>
           <button class="map-btn" id="btn-simulate" title="Test walking (no real GPS needed)">🕹️</button>
         </div>
         <div class="dpad" id="dpad">
@@ -980,7 +1017,22 @@
     + '<path d="M44,46 Q50,48 56,46" stroke="#8a5c3c" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
     + '<ellipse cx="41" cy="32" rx="7" ry="4.5" fill="#fff" opacity="0.28" transform="rotate(-18 41 32)"/>'
     + '</svg>';
-  function playerAvatarMarkup(gender){ return gender==='male' ? MALE_AVATAR_SVG : FEMALE_AVATAR_SVG; }
+  // Hand-painted witch art replaces the old inline SVGs: a front-facing portrait for
+  // menus/HUD/profile/character-confirm, and a from-behind pose for the on-map marker,
+  // since the game camera follows the player from over-the-shoulder.
+  const AVATAR_IMG = {
+    female: { front:'assets/girl-front.png', back:'assets/girl-back.png' },
+    male:   { front:'assets/boy-front.png',  back:'assets/boy-back.png' }
+  };
+  function frontAvatarMarkup(gender){
+    const g = gender==='male' ? 'male' : 'female';
+    return '<img class="player-avatar-svg" src="'+AVATAR_IMG[g].front+'" alt="'+g+' witch" draggable="false">';
+  }
+  function backAvatarMarkup(gender){
+    const g = gender==='male' ? 'male' : 'female';
+    return '<img class="player-avatar-svg" src="'+AVATAR_IMG[g].back+'" alt="'+g+' witch, seen from behind" draggable="false">';
+  }
+  function playerAvatarMarkup(gender){ return frontAvatarMarkup(gender); } // kept for any old call sites — portrait view
   // The trick-or-treat costume worn on the map itself (matches the reference art) — your
   // chosen trainer look still shows in the avatar badge, profile, and character select.
   const PLAYER_GHOST_COSTUME_SVG = '<svg class="player-avatar-svg" viewBox="0 0 100 140" xmlns="http://www.w3.org/2000/svg">'
@@ -1292,8 +1344,9 @@
     const ok = await saveNow(true);
     await rememberEmail(email);
     if (!ok) $('#reg-error').textContent = 'Could not reach save storage — you can still play, it will retry automatically.';
+    $('#char-portrait-img').src = AVATAR_IMG[state.avatar].front;
+    $('#char-portrait-title').textContent = 'This is you, '+username+'…';
     showScreen('char');
-    $$('.char-card').forEach(c=>c.classList.toggle('sel', c.dataset.av===state.avatar));
   }
   $('#btn-register').onclick = ()=>{ const gender = $('#gender-select .sel').dataset.g; doRegister($('#reg-email').value, $('#reg-username').value, gender, $('#reg-age').value, false); };
   $('#btn-google-register').onclick = ()=>{
@@ -1301,7 +1354,6 @@
     const username = email.split('@')[0]; const gender = $('#gender-select .sel').dataset.g;
     doRegister(email, username, gender, $('#reg-age').value, true);
   };
-  $$('.char-card').forEach(card=>{ card.onclick = ()=>{ $$('.char-card').forEach(c=>c.classList.remove('sel')); card.classList.add('sel'); state.avatar=card.dataset.av; }; });
   $('#btn-enter-world').onclick = ()=>{
     if (state.collection.length===0){ showStarterSelect(); } else { enterGame(true); }
   };
@@ -1336,8 +1388,8 @@
   };
 
   async function enterGame(isNew){
-    const av = playerAvatarMarkup(state.avatar);
-    $('#hud-avatar').innerHTML = av; $('#player-avatar').innerHTML = av; $('#profile-avatar').innerHTML = av;
+    const avFront = frontAvatarMarkup(state.avatar), avBack = backAvatarMarkup(state.avatar);
+    $('#hud-avatar').innerHTML = avFront; $('#player-avatar').innerHTML = avBack; $('#profile-avatar').innerHTML = avFront;
     $('#avatar-corn-l').innerHTML = CANDY_ICON; $('#avatar-corn-r').innerHTML = CANDY_ICON;
     $('#profile-name').textContent = state.username;
     $('#profile-email').textContent = state.email; $('#profile-gender').textContent = state.gender; $('#profile-age').textContent = state.age;
@@ -1435,6 +1487,17 @@
     return { east:(lon1-lon0)*mPerDegLon, north:(lat1-lat0)*mPerDegLat };
   }
   function applyWorldTransform(){
+    // These camera fields are only ever set once at script load, on the *original* state
+    // object — but logging in / registering replaces state.geo state.avatar etc with a
+    // freshly loaded profile, and doRegister in particular swaps in a brand-new state
+    // object entirely. Defaulting here means the camera always has something sane to
+    // render even before enterGame() has had a chance to re-seed it, instead of throwing
+    // and silently halting the whole render loop (which is what used to happen — the map
+    // would look "stuck"/blank right after a fresh signup).
+    if (typeof state.cameraTilt !== 'number') state.cameraTilt = TILT_MAX * (1-ZOOM_MIN)/(ZOOM_MAX-ZOOM_MIN);
+    if (typeof state.cameraZoom !== 'number') state.cameraZoom = 1;
+    if (typeof state.cameraRotate !== 'number') state.cameraRotate = 0;
+    if (!state.playerWorldPos) state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
     const o = state.worldOffset || {x:0,y:0};
     // Tilt lives on the outermost wrapper only, so it always tilts the camera toward
     // whatever you're currently facing — panning/rotating underneath never fights with it.
@@ -1462,6 +1525,37 @@
   function updateGpsStatusText(viaSim){
     $('#gps-status').textContent = (viaSim?'SIMULATED · ':'GPS: ')+state.geo.lat.toFixed(5)+', '+state.geo.lon.toFixed(5);
   }
+  // A raw GPS fix goes through here before it's allowed to move the world. Phone GPS
+  // occasionally throws out one wildly-wrong low-accuracy reading (common right after a
+  // cold start, or near tall buildings) before settling — without filtering, that single
+  // bad fix would recenter the whole chunk system on the wrong spot for a moment, which is
+  // what made roads/buildings load in and then immediately get unloaded again. A fix is
+  // trusted immediately if it's reasonably precise or the jump is small; a big jump paired
+  // with poor accuracy is held back — unless several in a row get rejected, in which case
+  // we assume it's real (you may have actually moved fast, or restarted somewhere new).
+  let rejectedFixStreak = 0;
+  function isPlausibleFix(lat, lon, accuracy){
+    if (!state.geo) return true;
+    const d = metersDelta(state.geo.lat, state.geo.lon, lat, lon);
+    const dist = Math.hypot(d.east, d.north);
+    const elapsedS = Math.max(0.5, (Date.now() - (state.lastFixTs||Date.now()))/1000);
+    const plausibleMax = Math.max(25, elapsedS * 12); // ~43 km/h ceiling, plus a jitter floor
+    const acc = (typeof accuracy === 'number') ? accuracy : 30;
+    if (dist <= plausibleMax) return true;
+    if (acc <= 35) return true; // trust a big jump if the fix itself claims to be precise
+    if (rejectedFixStreak >= 2) return true; // don't get stuck forever on a stale position
+    return false;
+  }
+  function handleGpsFix(lat, lon, accuracy, viaSim){
+    if (!viaSim && state.geo && !isPlausibleFix(lat, lon, accuracy)){
+      rejectedFixStreak++;
+      return;
+    }
+    rejectedFixStreak = 0;
+    state.lastFixTs = Date.now();
+    state.lastFixAccuracy = accuracy;
+    onPositionUpdate(lat, lon, viaSim);
+  }
   function onPositionUpdate(lat, lon, viaSim){
     if (!state.geoAnchor){ setAnchorAndBuild(lat, lon); updateGpsStatusText(viaSim); return; }
     const prevGeo = state.geo;
@@ -1476,10 +1570,21 @@
     lastMoveTs = Date.now();
     $('#player-avatar').classList.add('walking');
 
-    // The anchor never resets — the world just keeps extending as you walk, like a real map.
+    // The anchor never resets — the world just keeps extending as you walk, like a real map —
+    // EXCEPT once you've wandered far enough that the fixed-size map canvas would start
+    // clipping things at its edge, at which point we quietly re-anchor on your current spot
+    // (same trick Pokemon-GO-style games use) so roads never just stop rendering because
+    // you've walked off the edge of the coordinate space.
     const fromAnchor = metersDelta(state.geoAnchor.lat, state.geoAnchor.lon, lat, lon);
+    const proposedX = WORLD_CENTER + fromAnchor.east*GPS_SCALE, proposedY = WORLD_CENTER - fromAnchor.north*GPS_SCALE;
+    const distFromCenter = Math.hypot(proposedX - WORLD_CENTER, proposedY - WORLD_CENTER);
+    if (distFromCenter > WORLD_CENTER * 0.82){
+      setAnchorAndBuild(lat, lon);
+      showToast('🌍 Recentering the map…');
+      return;
+    }
     state.worldOffset = { x: fromAnchor.east*GPS_SCALE, y: fromAnchor.north*GPS_SCALE };
-    state.playerWorldPos = { x: WORLD_CENTER + fromAnchor.east*GPS_SCALE, y: WORLD_CENTER - fromAnchor.north*GPS_SCALE };
+    state.playerWorldPos = { x: proposedX, y: proposedY };
     applyWorldTransform();
     refreshNodeDistances();
     ensureChunksLoaded();
@@ -1490,7 +1595,7 @@
     try {
       if (watchId!==null) navigator.geolocation.clearWatch(watchId);
       watchId = navigator.geolocation.watchPosition(
-        pos => { gotRealFix = true; onPositionUpdate(pos.coords.latitude, pos.coords.longitude, false); },
+        pos => { gotRealFix = true; handleGpsFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false); },
         err => {
           if (gotRealFix) return; // we already have a fix; don't overwrite a good status with a transient error
           const msgs = {1:'Location permission blocked (this in-chat preview may not allow it — try the downloaded app on your phone).', 2:'Position unavailable right now.', 3:'GPS is taking too long to respond.'};
@@ -1510,7 +1615,7 @@
       if (!navigator.geolocation || simulateMode) return;
       try {
         navigator.geolocation.getCurrentPosition(
-          pos => { gotRealFix = true; onPositionUpdate(pos.coords.latitude, pos.coords.longitude, false); },
+          pos => { gotRealFix = true; handleGpsFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy, false); },
           ()=>{}, {enableHighAccuracy:true, maximumAge:3000, timeout:8000}
         );
       } catch(e){}
@@ -1610,6 +1715,61 @@
   $('#btn-zoom-out').onclick = ()=> setZoom(state.cameraZoom - 0.15);
   $('#btn-rotate-l').onclick = ()=>{ state.cameraRotate = (state.cameraRotate-20+360)%360; applyWorldTransform(); };
   $('#btn-rotate-r').onclick = ()=>{ state.cameraRotate = (state.cameraRotate+20)%360; applyWorldTransform(); };
+
+  // ---------------- COMPASS (device heading) ----------------
+  // "Point your phone a direction and your character slowly turns that way": off by
+  // default (most browsers — especially iOS Safari — require an explicit tap before
+  // they'll hand over orientation data, which is why this is a button, not automatic),
+  // and once on, a smoothing loop eases the camera toward the reported heading each
+  // frame rather than snapping straight to it, so ordinary sensor jitter doesn't make
+  // the view twitch. Walking direction (GPS) and facing direction (compass) are two
+  // separate systems on purpose — Pokemon-GO-style games keep them independent so
+  // looking around doesn't fight with where you're actually moving.
+  let compassEnabled = false, compassTargetHeading = null, compassRAF = null, compassHandlerName = null;
+  function headingFromEvent(e){
+    if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) return e.webkitCompassHeading;
+    if (e.absolute && typeof e.alpha === 'number') return (360 - e.alpha) % 360;
+    return null;
+  }
+  function onDeviceOrientation(e){
+    const h = headingFromEvent(e);
+    if (h===null || isNaN(h)) return;
+    compassTargetHeading = h;
+  }
+  function compassLoop(){
+    if (compassEnabled && compassTargetHeading!==null){
+      let diff = ((compassTargetHeading - state.cameraRotate + 540) % 360) - 180;
+      if (Math.abs(diff) > 0.4){
+        state.cameraRotate = (state.cameraRotate + diff*0.08 + 360) % 360;
+        applyWorldTransform();
+      }
+    }
+    compassRAF = requestAnimationFrame(compassLoop);
+  }
+  async function enableCompass(){
+    try {
+      if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function'){
+        const res = await DeviceOrientationEvent.requestPermission();
+        if (res !== 'granted'){ showToast('Compass permission denied'); return; }
+      } else if (!('DeviceOrientationEvent' in window)){
+        showToast('No compass sensor on this device'); return;
+      }
+    } catch(e){ showToast('Compass not available here'); return; }
+    compassHandlerName = ('ondeviceorientationabsolute' in window) ? 'deviceorientationabsolute' : 'deviceorientation';
+    window.addEventListener(compassHandlerName, onDeviceOrientation);
+    compassEnabled = true;
+    $('#btn-compass').classList.add('compass-on');
+    if (!compassRAF) compassLoop();
+    showToast('🧭 Compass camera on');
+  }
+  function disableCompass(){
+    compassEnabled = false;
+    compassTargetHeading = null;
+    if (compassHandlerName) window.removeEventListener(compassHandlerName, onDeviceOrientation);
+    $('#btn-compass').classList.remove('compass-on');
+    showToast('Compass off — manual rotate');
+  }
+  $('#btn-compass').onclick = ()=>{ compassEnabled ? disableCompass() : enableCompass(); };
 
   // Single finger = swipe left/right to turn around your character.
   // Two fingers = pinch out to zoom into ground level, pinch in to return to sky view.
@@ -1785,9 +1945,32 @@
       }
     }
     processChunkQueue();
-    pruneFarChunks(cx, cy);
+    pruneFarChunksThrottled(cx, cy);
   }
-  const CHUNK_KEEP_RADIUS = 2; // keep this ring of chunks around the player loaded; anything further gets unloaded
+  const CHUNK_KEEP_RADIUS = 3; // keep this ring of chunks around the player loaded; anything further gets unloaded
+  const PRUNE_MIN_INTERVAL_MS = 4000; // don't unload more than once every few seconds — gives
+  // an in-flight chunk fetch time to land, and rides out a single noisy GPS fix without
+  // yanking nearby roads out from under you the moment it arrives.
+  let lastPruneTs = 0, prunePending = null;
+  function pruneFarChunksThrottled(centerCx, centerCy){
+    const now = Date.now();
+    if (now - lastPruneTs < PRUNE_MIN_INTERVAL_MS){
+      prunePending = {cx:centerCx, cy:centerCy};
+      return;
+    }
+    lastPruneTs = now; prunePending = null;
+    pruneFarChunks(centerCx, centerCy);
+  }
+  if (!window.__totoPruneTicker){
+    window.__totoPruneTicker = true;
+    setInterval(()=>{
+      if (prunePending && Date.now()-lastPruneTs >= PRUNE_MIN_INTERVAL_MS){
+        lastPruneTs = Date.now();
+        const p = prunePending; prunePending = null;
+        pruneFarChunks(p.cx, p.cy);
+      }
+    }, 1000);
+  }
   function pruneFarChunks(centerCx, centerCy){
     // Chunks never used to unload at all — every deco and every road/building shape you'd
     // ever walked near just piled up in the DOM forever. That unbounded growth was the
@@ -1913,7 +2096,7 @@
     // Live roads/buildings/parks/water for this chunk — this is what makes the map match
     // reality, drawn in on top once it arrives without blocking anything above.
     try {
-      const parks = await fetchChunkTerrain(lat, lon, chunkEls.terrain);
+      const parks = await fetchChunkTerrain(lat, lon, chunkEls.terrain, key);
       if (gym && parks.length){
         const spot = parks[Math.floor(rand(baseSeed+95)*parks.length)];
         gym.x = spot.x; gym.y = spot.y; gym.atPark = true;
@@ -1924,7 +2107,7 @@
     refreshNodeDistances();
   }
 
-  async function fetchChunkTerrain(lat, lon, terrainBucket){
+  async function fetchChunkTerrain(lat, lon, terrainBucket, key){
     const d = 0.0023; // slightly larger than a chunk so edges overlap cleanly
     const bbox = (lat-d)+','+(lon-d)+','+(lat+d)+','+(lon+d);
     const query = '[out:json][timeout:10];('
@@ -1978,6 +2161,12 @@
     });
 
     if (waterParts.length || parkParts.length || roadParts.length || buildingParts.length){
+      // If this chunk was unloaded (pruned) while the network fetch was still in flight,
+      // don't attach the result at all — otherwise you'd get an orphaned, untracked group
+      // of roads that pruning could never find again to clean up later, which used to
+      // leave stray road fragments behind. Simply drop it; the chunk will fetch cleanly
+      // again if you walk back this way.
+      if (key && !state.chunkEls.has(key)) return parkCentroids;
       const g = document.createElementNS('http://www.w3.org/2000/svg','g');
       g.innerHTML = waterParts.join('') + parkParts.join('') + roadParts.join('') + buildingParts.join('');
       $('#terrain-svg').appendChild(g);
@@ -2582,16 +2771,53 @@
   $('#btn-retreat').onclick = ()=>{ if (battle){ clearBattleTimers(); battle=null; } $('#battle-screen').classList.remove('active'); };
 
   // ---------------- BOOT: stay logged in until an explicit Logout ----------------
-  // Fill in the character-select preview art now that the SVGs are defined.
-  $('#card-female .char-avatar').innerHTML = FEMALE_AVATAR_SVG;
-  $('#card-male .char-avatar').innerHTML = MALE_AVATAR_SVG;
+  // ---------------- LOADING SCREEN ----------------
+  // Shown first, every launch. Two real jobs happen here, not just for show: (1) it warms
+  // up the GPS radio / asks for location permission as early as possible, since a cold GPS
+  // fix is the slowest part of getting into the game and the roads/buildings can't be
+  // fetched until a fix exists; (2) it tries to restore your last session. The progress bar
+  // itself creeps forward on a timer so it always feels alive, then snaps to 100% once both
+  // jobs (and a short minimum display time, so it never just flickers) are done.
+  const LOADING_TIPS = [
+    "Tip: Don't forget your magical items!",
+    'Tip: Totos hide near parks and water after dark.',
+    "Tip: Tap a gym to challenge its guardian.",
+    'Tip: The farther you roam, the rarer what you find.',
+    'Tip: Swipe to look around — pinch to get closer to the ground.'
+  ];
+  (async function runLoadingSequence(){
+    const fill = $('#loading-bar-fill'), pctEl = $('#loading-pct'), tipEl = $('#loading-tip'), statusEl = $('#loading-status');
+    let progress = 2, tipIdx = 0;
+    function setProgress(p, label){
+      progress = Math.max(progress, Math.min(99, p));
+      fill.style.width = progress.toFixed(0)+'%'; pctEl.textContent = Math.round(progress)+'%';
+      if (label) statusEl.textContent = label;
+    }
+    const tipTimer = setInterval(()=>{
+      tipIdx = (tipIdx+1) % LOADING_TIPS.length;
+      tipEl.style.opacity = '0';
+      setTimeout(()=>{ tipEl.textContent = LOADING_TIPS[tipIdx]; tipEl.style.opacity='1'; }, 220);
+    }, 2200);
+    const creepTimer = setInterval(()=> setProgress(progress + (progress<65?2.4:0.5)), 140);
 
-  (async function bootstrap(){
-    const sub = document.querySelector('#toto-root .logo-sub');
-    const original = sub ? sub.textContent : '';
-    if (sub) sub.textContent = 'Restoring your session…';
-    const found = await tryAutoLogin();
-    if (!found && sub) sub.textContent = original;
+    setProgress(12, 'Waking the pumpkins…');
+    const gpsWarmup = new Promise(res=>{
+      if (!navigator.geolocation){ res(); return; }
+      try {
+        navigator.geolocation.getCurrentPosition(()=>res(), ()=>res(), {enableHighAccuracy:true, timeout:6000, maximumAge:60000});
+      } catch(e){ res(); }
+    });
+    setProgress(30, 'Finding your street…');
+    const minDisplay = new Promise(res=> setTimeout(res, 1500));
+    const autoLoginPromise = tryAutoLogin(); // fires enterGame()/showScreen('game') itself if a session is found
+    setProgress(58, 'Loading your trainer…');
+    await Promise.all([minDisplay, Promise.race([gpsWarmup, new Promise(res=>setTimeout(res,4500))])]);
+    setProgress(94, 'Almost there…');
+    const found = await autoLoginPromise;
+    clearInterval(tipTimer); clearInterval(creepTimer);
+    progress = 100; fill.style.width='100%'; pctEl.textContent='100%'; statusEl.textContent='Ready!';
+    await new Promise(res=> setTimeout(res, 200));
+    if (!found) showScreen('auth');
   })();
 
 })();
