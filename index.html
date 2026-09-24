@@ -177,6 +177,35 @@
      visual, sits above the terrain/decor but below the UI chrome. */
   .fog-vignette { position:absolute; inset:0; z-index:8; pointer-events:none;
     background: radial-gradient(circle at 50% 58%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 17%, rgba(8,4,16,0.55) 46%, rgba(6,3,13,0.88) 72%); }
+  /* Daytime lightens the same night-purple art rather than swapping in a whole separate
+     art set — the Halloween mood stays, it's just not pitch dark at noon. */
+  .map-view.is-daytime .world { filter: brightness(1.32) saturate(0.92); }
+  .map-view.is-daytime .fog-vignette { background: radial-gradient(circle at 50% 58%, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 22%, rgba(40,30,55,0.28) 50%, rgba(30,22,45,0.55) 74%); }
+  .map-view.is-daytime .haunt-bg { filter: brightness(1.4) saturate(0.8); opacity:0.6; }
+
+  .env-chip { font-size:11px; padding:6px 10px; }
+  .env-chip span:first-child { font-size:15px; }
+
+  .hazard-banner { position:absolute; left:10px; right:10px; top:64px; z-index:40; display:none;
+    background:linear-gradient(135deg,#c0392b,#8e2a20); border:1.5px solid #ff8a70; border-radius:14px;
+    padding:10px 12px; align-items:center; gap:10px; box-shadow:0 10px 24px rgba(0,0,0,0.4); }
+  .hazard-banner.show { display:flex; }
+  .hazard-icon { font-size:22px; }
+  .hazard-text { flex:1; }
+  .hazard-title { color:#fff; font-weight:800; font-size:13px; }
+  .hazard-sub { color:#ffd9d0; font-weight:600; font-size:11px; margin-top:1px; }
+  .hazard-close { background:rgba(255,255,255,0.18); border:none; color:#fff; width:26px; height:26px; border-radius:50%; font-weight:800; cursor:pointer; }
+
+  /* Weather particles: plain DOM divs animated with CSS, regenerated only when the
+     weather type actually changes — cheap enough at these counts to leave running
+     continuously (see performance notes elsewhere on this file for why that matters). */
+  .weather-fx { position:absolute; inset:0; z-index:9; pointer-events:none; overflow:hidden; }
+  .w-drop { position:absolute; top:-6%; width:1.5px; height:16px; background:linear-gradient(rgba(180,210,255,0), rgba(180,210,255,0.75)); animation-name:w-fall; animation-timing-function:linear; animation-iteration-count:infinite; }
+  .w-flake { position:absolute; top:-6%; border-radius:50%; background:rgba(255,255,255,0.85); animation-name:w-drift; animation-timing-function:linear; animation-iteration-count:infinite; }
+  @keyframes w-fall { from{ transform:translateY(0); } to{ transform:translateY(112vh); } }
+  @keyframes w-drift { 0%{ transform:translate(0,0); } 50%{ transform:translate(14px,56vh); } 100%{ transform:translate(-6px,112vh); } }
+  .weather-fx.storm-flash { animation: w-lightning 6.5s ease-in-out infinite; }
+  @keyframes w-lightning { 0%,93%,100%{ background:rgba(255,255,255,0); } 94%{ background:rgba(220,225,255,0.35); } 95%{ background:rgba(220,225,255,0); } 96%{ background:rgba(220,225,255,0.22); } 97%{ background:rgba(220,225,255,0); } }
 
   .toto-node, .gym-node { position:absolute; transform: translate(-50%,-100%); text-align:center; cursor:pointer; z-index:10; contain:layout style; }
   .node-spin { position:relative; z-index:2; transform: rotate(calc(-1 * var(--rot,0deg))); }
@@ -481,7 +510,22 @@
             <span class="scroll-icon">📜</span><span class="scroll-glyphs">👻🦇</span>
             <span class="scroll-count"><span id="hud-nearby">0</span></span>
           </div>
+          <div class="hud-chip env-chip" id="hud-daynight" title="Local time of day, based on your GPS position">
+            <span id="daynight-icon">🌙</span><span id="daynight-label">Night</span>
+          </div>
+          <div class="hud-chip env-chip" id="hud-weather" title="Local weather, based on your GPS position">
+            <span id="weather-icon">☁️</span><span id="weather-label">—</span>
+          </div>
         </div>
+      </div>
+
+      <div class="hazard-banner" id="hazard-banner">
+        <span class="hazard-icon">⚠️</span>
+        <div class="hazard-text">
+          <div class="hazard-title" id="hazard-title">Severe weather nearby</div>
+          <div class="hazard-sub" id="hazard-sub">Play it safe out there.</div>
+        </div>
+        <button class="hazard-close" id="hazard-close">✕</button>
       </div>
 
       <div class="map-view" id="map-view">
@@ -507,6 +551,7 @@
           </div>
         </div>
         <div class="fog-vignette"></div>
+        <div class="weather-fx" id="weather-fx"></div>
 
         <div class="player-pin">
           <div class="player-ring"></div>
@@ -1504,6 +1549,14 @@
   let watchId = null, simulateMode = false, lastMoveTs = Date.now(), idleCheckTimer = null;
   state.cameraRotate = 0; state.worldOffset = {x:0,y:0}; state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
   state.cameraZoom = 1; state.cameraTilt = TILT_MAX * (1-ZOOM_MIN)/(ZOOM_MAX-ZOOM_MIN);
+  // heading = which way you're actually facing/walking in the real world (compass-driven,
+  // 0 = north). viewOrbit = a purely cosmetic "look around your character" swipe, separate
+  // from heading on purpose. These used to be the same variable, which is why swiping to
+  // peek at her front used to fight with the compass and snap back — the compass kept
+  // pulling that shared value toward your real heading mid-swipe. Now the world only ever
+  // rotates to match heading (so it's always accurate to which way you're really facing/
+  // walking), and viewOrbit *only* ever changes which side of her you see, never the map.
+  state.heading = 0; state.viewOrbit = 0;
 
   function metersDelta(lat0, lon0, lat1, lon1){
     const mPerDegLat = 110540, mPerDegLon = 111320 * Math.cos(lat0*Math.PI/180);
@@ -1519,7 +1572,12 @@
     // would look "stuck"/blank right after a fresh signup).
     if (typeof state.cameraTilt !== 'number') state.cameraTilt = TILT_MAX * (1-ZOOM_MIN)/(ZOOM_MAX-ZOOM_MIN);
     if (typeof state.cameraZoom !== 'number') state.cameraZoom = 1;
-    if (typeof state.cameraRotate !== 'number') state.cameraRotate = 0;
+    if (typeof state.heading !== 'number') state.heading = 0;
+    if (typeof state.viewOrbit !== 'number') state.viewOrbit = 0;
+    // World rotation is driven ONLY by heading — this is what makes the map "heading-up"
+    // (whichever way you're really facing stays pointing to the top of the screen) and
+    // it's the one thing viewOrbit (below) never touches.
+    state.cameraRotate = ((-state.heading % 360) + 360) % 360;
     if (!state.playerWorldPos) state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
     const o = state.worldOffset || {x:0,y:0};
     // Tilt lives on the outermost wrapper only, so it always tilts the camera toward
@@ -1541,19 +1599,20 @@
     updatePlayerFacing();
   }
   // We only have two painted poses per character (front/back) — no true left/right profile
-  // art — so "seeing every angle as you turn the camera" is approximated rather than a real
-  // 3D turnaround: the circle is split into four 90° arcs alternating back / front /
-  // front(mirrored) / back(mirrored), so turning all the way around visibly cycles through
-  // a different silhouette each quarter-turn instead of the character staying frozen facing
-  // one way. It's a deliberate trade-off given the source art; true 8-directional sprites
-  // (or a real side-view painting) would replace this cleanly if that art ever exists.
+  // art — so "seeing every angle as you swipe around her" is approximated rather than a
+  // real 3D turnaround: the orbit circle is split into four 90° arcs alternating back /
+  // front / front(mirrored) / back(mirrored). viewOrbit=0 (the resting position, and where
+  // it settles back to after you let go — see setupLookAround) always shows her back, which
+  // is also always the direction she's actually walking, since the world itself is oriented
+  // by heading, not by viewOrbit. Swiping only changes which side you're peeking at, never
+  // her real facing/walk direction.
   let _facing = { front:null, mirror:null, gender:null };
   function updatePlayerFacing(){
     const holder = document.getElementById('player-avatar');
     const img = holder && holder.querySelector('img');
     if (!img) return;
     const g = state.avatar==='male' ? 'male' : 'female';
-    const a = ((state.cameraRotate%360)+360)%360;
+    const a = ((state.viewOrbit%360)+360)%360;
     const showFront = a > 90 && a < 270;
     const mirror = a > 180;
     if (_facing.front !== showFront || _facing.gender !== g){
@@ -1570,6 +1629,8 @@
     state.playerWorldPos = {x:WORLD_CENTER, y:WORLD_CENTER};
     applyWorldTransform();
     buildWorld();
+    updateDayNight();
+    fetchWeather(true);
   }
   function updateGpsStatusText(viaSim){
     $('#gps-status').textContent = (viaSim?'SIMULATED · ':'GPS: ')+state.geo.lat.toFixed(5)+', '+state.geo.lon.toFixed(5);
@@ -1728,6 +1789,145 @@
     });
   }
 
+  // ---------------- DAY / NIGHT ----------------
+  // Computed locally from GPS lat/lon + the device clock (a standard sunrise/sunset
+  // approximation) rather than fetched from anywhere — it's cheap, works offline, and
+  // updates the moment a real GPS fix arrives instead of waiting on a network round trip.
+  function sunTimesUTC(lat, lon, date){
+    // Returns {riseUTC, setUTC} as decimal UTC hours for the given calendar date at lat/lon.
+    // Standard NOAA-style approximation — plenty accurate for "is it light out right now".
+    const rad = Math.PI/180, deg = 180/Math.PI;
+    const start = Date.UTC(date.getUTCFullYear(),0,1);
+    const dayOfYear = Math.floor((Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate()) - start)/86400000) + 1;
+    const zenith = 90.833;
+    function calc(isRise){
+      const lngHour = lon/15;
+      const t = dayOfYear + ((isRise?6:18) - lngHour)/24;
+      const M = (0.9856*t) - 3.289;
+      let L = M + (1.916*Math.sin(M*rad)) + (0.020*Math.sin(2*M*rad)) + 282.634;
+      L = ((L%360)+360)%360;
+      let RA = deg*Math.atan(0.91764*Math.tan(L*rad));
+      RA = ((RA%360)+360)%360;
+      const Lquad = Math.floor(L/90)*90, RAquad = Math.floor(RA/90)*90;
+      RA = (RA + (Lquad-RAquad))/15;
+      const sinDec = 0.39782*Math.sin(L*rad), cosDec = Math.cos(Math.asin(sinDec));
+      const cosH = (Math.cos(zenith*rad) - (sinDec*Math.sin(lat*rad))) / (cosDec*Math.cos(lat*rad));
+      if (cosH > 1 || cosH < -1) return null; // polar day/night — no real sunrise/set
+      let H = isRise ? 360 - deg*Math.acos(cosH) : deg*Math.acos(cosH);
+      H = H/15;
+      let T = H + RA - (0.06571*t) - 6.622;
+      let UT = T - lngHour;
+      UT = ((UT%24)+24)%24;
+      return UT;
+    }
+    return { riseUTC: calc(true), setUTC: calc(false) };
+  }
+  function updateDayNight(){
+    const geo = state.geo || state.geoAnchor;
+    const mapView = $('#map-view');
+    const icon = $('#daynight-icon'), label = $('#daynight-label');
+    if (!geo){ return; }
+    const now = new Date();
+    const nowUTCh = now.getUTCHours() + now.getUTCMinutes()/60;
+    const { riseUTC, setUTC } = sunTimesUTC(geo.lat, geo.lon, now);
+    let isDay;
+    if (riseUTC===null || setUTC===null){
+      // Polar day/night edge case — fall back to a plain local-clock guess.
+      const localH = now.getHours() + now.getMinutes()/60;
+      isDay = localH >= 7 && localH < 19;
+    } else if (riseUTC < setUTC){
+      isDay = nowUTCh >= riseUTC && nowUTCh < setUTC;
+    } else {
+      isDay = nowUTCh >= riseUTC || nowUTCh < setUTC;
+    }
+    mapView.classList.toggle('is-daytime', isDay);
+    icon.textContent = isDay ? '☀️' : '🌙';
+    label.textContent = isDay ? 'Daytime' : 'Night';
+  }
+
+  // ---------------- WEATHER ----------------
+  // Open-Meteo — free, no API key, CORS-friendly. Re-checked every 10 minutes and whenever
+  // you've moved far enough that the old reading no longer applies to where you are.
+  const WEATHER_REFRESH_MS = 10*60*1000;
+  let lastWeatherFetch = 0, lastWeatherGeo = null, lastHazardCode = null;
+  const WEATHER_CODES = {
+    0:{icon:'☀️', label:'Clear', kind:'clear'}, 1:{icon:'🌤️', label:'Mostly clear', kind:'clear'},
+    2:{icon:'⛅', label:'Partly cloudy', kind:'clouds'}, 3:{icon:'☁️', label:'Overcast', kind:'clouds'},
+    45:{icon:'🌫️', label:'Fog', kind:'fog'}, 48:{icon:'🌫️', label:'Fog', kind:'fog'},
+    51:{icon:'🌦️', label:'Light drizzle', kind:'rain'}, 53:{icon:'🌦️', label:'Drizzle', kind:'rain'}, 55:{icon:'🌦️', label:'Heavy drizzle', kind:'rain'},
+    61:{icon:'🌧️', label:'Light rain', kind:'rain'}, 63:{icon:'🌧️', label:'Rain', kind:'rain'}, 65:{icon:'🌧️', label:'Heavy rain', kind:'rain', hazard:'Heavy rain in your area — watch for flooding and slick roads.'},
+    66:{icon:'🌧️', label:'Freezing rain', kind:'rain', hazard:'Freezing rain nearby — surfaces may be icy.'}, 67:{icon:'🌧️', label:'Freezing rain', kind:'rain', hazard:'Freezing rain nearby — surfaces may be icy.'},
+    71:{icon:'🌨️', label:'Light snow', kind:'snow'}, 73:{icon:'❄️', label:'Snow', kind:'snow'}, 75:{icon:'❄️', label:'Heavy snow', kind:'snow', hazard:'Heavy snow in your area — visibility and footing may be poor.'},
+    77:{icon:'❄️', label:'Snow grains', kind:'snow'},
+    80:{icon:'🌦️', label:'Rain showers', kind:'rain'}, 81:{icon:'🌧️', label:'Rain showers', kind:'rain'}, 82:{icon:'🌧️', label:'Violent showers', kind:'rain', hazard:'Violent rain showers nearby — consider heading indoors.'},
+    85:{icon:'🌨️', label:'Snow showers', kind:'snow'}, 86:{icon:'🌨️', label:'Heavy snow showers', kind:'snow', hazard:'Heavy snow showers nearby — visibility and footing may be poor.'},
+    95:{icon:'⛈️', label:'Thunderstorm', kind:'storm', hazard:'Thunderstorms in your area — get to safe shelter.'},
+    96:{icon:'⛈️', label:'Thunderstorm + hail', kind:'storm', hazard:'Thunderstorms with hail nearby — get to safe shelter.'},
+    99:{icon:'⛈️', label:'Severe thunderstorm', kind:'storm', hazard:'Severe thunderstorm in your area — get to safe shelter immediately.'}
+  };
+  function renderWeatherFx(kind){
+    const fx = $('#weather-fx');
+    if (fx.dataset.kind === kind) return; // already showing this — don't rebuild every poll
+    fx.dataset.kind = kind;
+    fx.innerHTML = '';
+    fx.classList.toggle('storm-flash', kind==='storm');
+    if (kind==='rain' || kind==='storm'){
+      const n = kind==='storm' ? 46 : 34;
+      let html = '';
+      for (let i=0;i<n;i++){
+        const left = Math.random()*100, dur = (0.5+Math.random()*0.4).toFixed(2), delay = (Math.random()*2).toFixed(2);
+        html += '<div class="w-drop" style="left:'+left.toFixed(1)+'%; animation-duration:'+dur+'s; animation-delay:-'+delay+'s;"></div>';
+      }
+      fx.innerHTML = html;
+    } else if (kind==='snow'){
+      let html = '';
+      for (let i=0;i<40;i++){
+        const left = Math.random()*100, size = (2+Math.random()*3).toFixed(1), dur=(4+Math.random()*3).toFixed(2), delay=(Math.random()*6).toFixed(2);
+        html += '<div class="w-flake" style="left:'+left.toFixed(1)+'%; width:'+size+'px; height:'+size+'px; animation-duration:'+dur+'s; animation-delay:-'+delay+'s;"></div>';
+      }
+      fx.innerHTML = html;
+    }
+    // fog/clouds/clear get no particle layer — just the icon/label chip.
+  }
+  function showHazard(code, msg){
+    if (lastHazardCode === code) return; // already showing/shown for this exact condition
+    lastHazardCode = code;
+    $('#hazard-title').textContent = 'Severe weather nearby';
+    $('#hazard-sub').textContent = msg;
+    $('#hazard-banner').classList.add('show');
+  }
+  $('#hazard-close').onclick = ()=> $('#hazard-banner').classList.remove('show');
+  async function fetchWeather(force){
+    const geo = state.geo || state.geoAnchor;
+    if (!geo) return;
+    const now = Date.now();
+    if (!force && now-lastWeatherFetch < WEATHER_REFRESH_MS && lastWeatherGeo){
+      const moved = Math.hypot(geo.lat-lastWeatherGeo.lat, geo.lon-lastWeatherGeo.lon);
+      if (moved < 0.02) return; // ~2km — same weather, don't hammer the API
+    }
+    lastWeatherFetch = now; lastWeatherGeo = {lat:geo.lat, lon:geo.lon};
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude='+geo.lat.toFixed(4)+'&longitude='+geo.lon.toFixed(4)+'&current=weather_code,wind_speed_10m&timezone=auto';
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      const code = data.current && data.current.weather_code;
+      const wind = data.current && data.current.wind_speed_10m;
+      const info = WEATHER_CODES[code] || WEATHER_CODES[0];
+      $('#weather-icon').textContent = info.icon;
+      $('#weather-label').textContent = info.label;
+      renderWeatherFx(info.kind);
+      const windHazard = typeof wind==='number' && wind >= 60;
+      if (info.hazard) showHazard(code, info.hazard);
+      else if (windHazard) showHazard('wind'+Math.round(wind), 'High winds in your area ('+Math.round(wind)+' km/h) — be careful out there.');
+      else lastHazardCode = null;
+    } catch(e){ console.warn('weather fetch failed', e); }
+  }
+  if (!window.__totoEnvTicker){
+    window.__totoEnvTicker = true;
+    setInterval(()=>{ if (state.loggedIn){ updateDayNight(); fetchWeather(false); } }, 60*1000);
+  }
+
   // Simulated walking — lets you test movement/scrolling/proximity even where real GPS isn't reachable.
   $('#btn-simulate').onclick = ()=>{
     simulateMode = !simulateMode;
@@ -1762,18 +1962,20 @@
   }
   $('#btn-zoom-in').onclick = ()=> setZoom(state.cameraZoom + 0.15);
   $('#btn-zoom-out').onclick = ()=> setZoom(state.cameraZoom - 0.15);
-  $('#btn-rotate-l').onclick = ()=>{ state.cameraRotate = (state.cameraRotate-20+360)%360; applyWorldTransform(); };
-  $('#btn-rotate-r').onclick = ()=>{ state.cameraRotate = (state.cameraRotate+20)%360; applyWorldTransform(); };
+  // Rotate buttons now orbit the CAMERA around the character (viewOrbit) rather than
+  // spinning the map — see the state.heading/state.viewOrbit note above.
+  $('#btn-rotate-l').onclick = ()=>{ cancelOrbitReturn(); state.viewOrbit = (state.viewOrbit-20+360)%360; applyWorldTransform(); scheduleOrbitReturn(); };
+  $('#btn-rotate-r').onclick = ()=>{ cancelOrbitReturn(); state.viewOrbit = (state.viewOrbit+20+360)%360; applyWorldTransform(); scheduleOrbitReturn(); };
 
   // ---------------- COMPASS (device heading) ----------------
-  // "Point your phone a direction and your character slowly turns that way": off by
-  // default (most browsers — especially iOS Safari — require an explicit tap before
-  // they'll hand over orientation data, which is why this is a button, not automatic),
-  // and once on, a smoothing loop eases the camera toward the reported heading each
-  // frame rather than snapping straight to it, so ordinary sensor jitter doesn't make
-  // the view twitch. Walking direction (GPS) and facing direction (compass) are two
-  // separate systems on purpose — Pokemon-GO-style games keep them independent so
-  // looking around doesn't fight with where you're actually moving.
+  // "Point your phone a direction and your character slowly turns that way, and that's
+  // the way she'll walk": off by default (most browsers — especially iOS Safari — require
+  // an explicit tap before they'll hand over orientation data, which is why this is a
+  // button, not automatic), and once on, a smoothing loop eases state.heading toward the
+  // reported compass heading each frame rather than snapping straight to it, so ordinary
+  // sensor jitter doesn't make the view twitch. This drives the MAP's rotation only
+  // (heading-up, like a nav app) — it deliberately never touches viewOrbit, so swiping to
+  // peek at your character's front can't fight with the compass anymore.
   let compassEnabled = false, compassTargetHeading = null, compassRAF = null, compassHandlerName = null;
   function headingFromEvent(e){
     if (typeof e.webkitCompassHeading === 'number' && !isNaN(e.webkitCompassHeading)) return e.webkitCompassHeading;
@@ -1788,9 +1990,9 @@
   function compassLoop(){
     if (!compassEnabled){ compassRAF = null; return; } // stop spinning the RAF loop entirely once turned off, instead of ticking forever doing nothing
     if (compassTargetHeading!==null){
-      let diff = ((compassTargetHeading - state.cameraRotate + 540) % 360) - 180;
+      let diff = ((compassTargetHeading - state.heading + 540) % 360) - 180;
       if (Math.abs(diff) > 0.4){
-        state.cameraRotate = (state.cameraRotate + diff*0.08 + 360) % 360;
+        state.heading = (state.heading + diff*0.08 + 360) % 360;
         applyWorldTransform();
       }
     }
@@ -1821,8 +2023,29 @@
   }
   $('#btn-compass').onclick = ()=>{ compassEnabled ? disableCompass() : enableCompass(); };
 
-  // Single finger = swipe left/right to turn around your character.
+  // Single finger = swipe left/right to peek around your character (viewOrbit — a look,
+  // not a turn: it never changes her real heading/walk direction, and drifts back to the
+  // default behind-her view a couple seconds after you let go, same as a third-person
+  // game's free-look camera).
   // Two fingers = pinch out to zoom into ground level, pinch in to return to sky view.
+  let orbitReturnTimer = null, orbitReturnRAF = null;
+  function cancelOrbitReturn(){
+    if (orbitReturnTimer){ clearTimeout(orbitReturnTimer); orbitReturnTimer = null; }
+    if (orbitReturnRAF){ cancelAnimationFrame(orbitReturnRAF); orbitReturnRAF = null; }
+  }
+  function scheduleOrbitReturn(){
+    cancelOrbitReturn();
+    orbitReturnTimer = setTimeout(()=>{
+      function step(){
+        let diff = ((0 - state.viewOrbit + 540) % 360) - 180;
+        if (Math.abs(diff) < 0.6){ state.viewOrbit = 0; applyWorldTransform(); orbitReturnRAF = null; return; }
+        state.viewOrbit = (state.viewOrbit + diff*0.06 + 360) % 360;
+        applyWorldTransform();
+        orbitReturnRAF = requestAnimationFrame(step);
+      }
+      orbitReturnRAF = requestAnimationFrame(step);
+    }, 2200);
+  }
   (function setupLookAround(){
     const mapView = $('#map-view');
     mapView.style.touchAction = 'none';
@@ -1838,7 +2061,8 @@
       activePointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
       try { mapView.setPointerCapture(e.pointerId); } catch(err){}
       if (activePointers.size===1){
-        rotateDrag = { startX:e.clientX, startRotate: state.cameraRotate, pointerId:e.pointerId };
+        cancelOrbitReturn();
+        rotateDrag = { startX:e.clientX, startOrbit: state.viewOrbit, pointerId:e.pointerId };
         pinchState = null;
       } else if (activePointers.size===2){
         rotateDrag = null;
@@ -1855,19 +2079,20 @@
         setZoom(pinchState.startZoom * ratio);
       } else if (rotateDrag && e.pointerId===rotateDrag.pointerId){
         const dx = e.clientX - rotateDrag.startX;
-        let r = (rotateDrag.startRotate + dx*ROTATE_SENSITIVITY) % 360;
+        let r = (rotateDrag.startOrbit + dx*ROTATE_SENSITIVITY) % 360;
         if (r < 0) r += 360;
-        state.cameraRotate = r;
+        state.viewOrbit = r;
         applyWorldTransform();
       }
     });
     function releasePointer(e){
       activePointers.delete(e.pointerId);
       if (activePointers.size < 2) pinchState = null;
-      if (rotateDrag && e.pointerId===rotateDrag.pointerId) rotateDrag = null;
+      if (rotateDrag && e.pointerId===rotateDrag.pointerId){ rotateDrag = null; scheduleOrbitReturn(); }
       if (activePointers.size===1){
         const entry = Array.from(activePointers.entries())[0];
-        rotateDrag = { startX: entry[1].x, startRotate: state.cameraRotate, pointerId: entry[0] };
+        cancelOrbitReturn();
+        rotateDrag = { startX: entry[1].x, startOrbit: state.viewOrbit, pointerId: entry[0] };
       }
     }
     mapView.addEventListener('pointerup', releasePointer);
