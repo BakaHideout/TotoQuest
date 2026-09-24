@@ -120,6 +120,8 @@
   .starter-card .sp svg, .starter-card .sp img { width:1em; height:1.2em; vertical-align:middle; object-fit:contain; }
   .starter-card .nm { font-weight:800; font-size:10.5px; margin-top:4px; }
   .starter-card .nature { font-size:8.5px; color:#888; font-weight:700; text-transform:capitalize; }
+  .role-badge { font-size:9px; font-weight:800; margin-top:2px; }
+  .toto-card .role-badge, .dex-card .role-badge { font-size:8.5px; font-weight:800; margin-top:1px; }
 
   .game-wrap { height:100%; display:flex; flex-direction:column; }
   .top-hud { position:absolute; top:0; left:0; right:0; z-index:20; padding:14px 12px 0; display:flex; justify-content:flex-end; align-items:flex-start; pointer-events:none; }
@@ -387,6 +389,10 @@
   .btn-attack { flex:1; padding:16px; border-radius:14px; border:none; background:linear-gradient(135deg,#ff3b5c,#ff8a3d); color:#fff; font-weight:900; font-size:15px; cursor:pointer; }
   .btn-attack:active { transform: scale(0.96); }
   .btn-swap { padding:16px 12px; border-radius:14px; border:none; background:rgba(255,255,255,0.15); color:#fff; font-weight:800; font-size:11.5px; cursor:pointer; }
+  .btn-special { padding:16px 12px; border-radius:14px; border:none; color:#fff; font-weight:800; font-size:11.5px; cursor:pointer; display:none; }
+  .btn-special.role-healer { background:linear-gradient(135deg,#2ecc71,#1a9c58); }
+  .btn-special.role-supporter { background:linear-gradient(135deg,#b06bff,#7a3fd9); }
+  .btn-special:disabled { opacity:0.45; cursor:default; }
 
   .toni-glow { filter: drop-shadow(0 0 12px rgba(255,80,190,0.9)) drop-shadow(0 0 26px rgba(255,40,170,0.7)) drop-shadow(0 0 40px rgba(255,90,210,0.4)); animation: toniPulse 1.5s ease-in-out infinite; }
   /* shared animation for every standing creature's body parts */
@@ -742,6 +748,7 @@
     </div>
     <div class="battle-controls">
       <button class="btn-swap" id="btn-swap-toto">🔁 Swap</button>
+      <button class="btn-special" id="btn-special"></button>
       <button class="btn-attack" id="btn-attack">⚔️ ATTACK!</button>
     </div>
     <div class="catch-choice-overlay" id="catch-choice-overlay">
@@ -764,12 +771,60 @@
   const $$ = (sel, ctx) => Array.from((ctx||root).querySelectorAll(sel));
 
   const SPECIES = {
-    grass:[["Vine Wraith","🌿"],["Bramble Ghoul","🥀"]], water:[["Drowned Specter","🌊"],["Tide Phantom","💧"]],
-    fire:[["Will-o-Wisp","🔥"],["Ember Phantom","🕯️"]], ice:[["Frost Wight","❄️"],["Rime Ghost","🧊"]],
-    stone:[["Gargoyle Pup","🗿"],["Cairn Stalker","⛰️"]], electric:[["Static Poltergeist","⚡"],["Storm Wraith","🌩️"]],
+    grass:[["Vine Wraith","🌿"],["Bramble Ghoul","🥀"]], water:[["Boo Berry","👻"],["Potion Slime","🧪"]],
+    fire:[["Pumpkin Pup","🎃"],["Candle Imp","🕯️"]], ice:[["Bone Bean","💀"],["Witchcap Sprout","🍄"]],
+    stone:[["Cobweb Crab","🕸️"],["Grave Pebble","🪦"]], electric:[["Candy Bat","🦇"],["Moon Moth","🌙"]],
     wood:[["Hollow Treant","🌲"],["Rootbound Ghast","🍂"]],
     spooky:[["Pumpkin Fiend","🎃"],["Grave Wisp","👻"],["Bone Rattler","💀"],["Web Stalker","🕷️"],["Night Bat","🦇"]]
   };
+  // Battle role — every species is good at one of four things. Attackers hit hardest;
+  // Tankers soak hits (high HP/def, and see "TANK TAUNT" below for how they draw the
+  // enemy's attention off your team in group raids); Healers can patch up HP mid-fight;
+  // Supporters buff the rest of the team. statsFromCp() below reads this to shape each
+  // species' stats, and the battle UI reads it to decide which special action to offer.
+  const SPECIES_ROLE = {
+    'Vine Wraith':'supporter', 'Bramble Ghoul':'attacker',
+    'Hollow Treant':'tanker', 'Rootbound Ghast':'healer',
+    'Boo Berry':'healer', 'Potion Slime':'healer',
+    'Pumpkin Pup':'attacker', 'Candle Imp':'supporter',
+    'Bone Bean':'attacker', 'Witchcap Sprout':'supporter',
+    'Cobweb Crab':'tanker', 'Grave Pebble':'tanker',
+    'Candy Bat':'attacker', 'Moon Moth':'supporter',
+    'Pumpkin Fiend':'attacker', 'Grave Wisp':'supporter',
+    'Bone Rattler':'tanker', 'Web Stalker':'attacker', 'Night Bat':'supporter'
+  };
+  const ROLE_INFO = {
+    attacker:{ label:'Attacker', icon:'🔥', color:'#ff6a3d' },
+    tanker:{ label:'Tanker', icon:'🛡️', color:'#4d9fff' },
+    healer:{ label:'Healer', icon:'✚', color:'#3ddc7a' },
+    supporter:{ label:'Supporter', icon:'★', color:'#c07dff' }
+  };
+  // How hard each role leans into its specialty, as a multiplier on the same base curve
+  // every Toto would otherwise share. Attackers trade away HP/def for the biggest attack
+  // number in the game; Tankers do the opposite. Healers and Supporters give up some
+  // attack for a bigger energy pool, since their value comes from their special action
+  // (see battle code below), not from hitting hard.
+  const ROLE_STAT_MULT = {
+    attacker: { hp:0.85, atk:1.45, def:0.80, spd:1.05, nrg:1.00 },
+    tanker:   { hp:1.55, atk:0.65, def:1.55, spd:0.85, nrg:0.90 },
+    healer:   { hp:1.05, atk:0.70, def:0.95, spd:1.00, nrg:1.25 },
+    supporter:{ hp:1.00, atk:0.85, def:1.00, spd:1.10, nrg:1.20 }
+  };
+  function roleOf(name){ return SPECIES_ROLE[name] || 'attacker'; }
+  // Painted-art totos (as opposed to the hand-coded SVG bodies below) — cropped from
+  // provided reference art, background removed, only the character kept.
+  const TOTO_IMG = {
+    'Pumpkin Pup':'pumpkin_pup', 'Cobweb Crab':'cobweb_crab', 'Boo Berry':'boo_berry',
+    'Candle Imp':'candle_imp', 'Candy Bat':'candy_bat', 'Grave Pebble':'grave_pebble',
+    'Potion Slime':'potion_slime', 'Moon Moth':'moon_moth', 'Bone Bean':'bone_bean',
+    'Witchcap Sprout':'witchcap_sprout'
+  };
+  function totoImgMarkup(name, small){
+    const file = TOTO_IMG[name];
+    if (!file) return null;
+    const src = 'assets/totos/'+(small?'sm/':'')+file+'.png';
+    return '<img class="creature-img" src="'+src+'" alt="'+name+'" draggable="false">';
+  }
   const ELEMENTS = Object.keys(SPECIES);
   const STARTER_NATURES = ELEMENTS.filter(e=>e!=='spooky');
   const TIER_CAP = {normal:1500, legendary:3500, mythical:6500, eternal:20000};
@@ -794,7 +849,7 @@
     if (caught.tier !== 'normal'){
       const rolled = rollCaughtCp(caught.tier);
       caught.cp = rolled;
-      const s = statsFromCp(rolled);
+      const s = statsFromCp(rolled, caught.role);
       caught.maxHp=s.maxHp; caught.hp=s.maxHp; caught.atk=s.atk; caught.strength=s.strength; caught.def=s.def; caught.spd=s.spd; caught.maxEnergy=s.maxEnergy; caught.energy=s.maxEnergy;
     }
     state.collection.push(caught);
@@ -870,33 +925,13 @@
       + '<ellipse cx="38" cy="24" rx="11" ry="7" fill="#fff" opacity="0.35" transform="rotate(-20 38 24)"/>'
       + '</svg>';
   }
-  // Every one of the 14 elemental species gets its own body shape + look — not just a
-  // recolored copy of its nature-mate — so the roster actually reads as different animals.
+  // Every one of the 4 elemental species we kept (rest replaced with painted art above)
+  // gets its own body shape + look — not just a recolored copy of its nature-mate.
   const SPECIES_SVG = {
     'Vine Wraith': standingCreature({ body:'#6fbf5a', head:'#8fd67a', leg:'#4a8f3a', stroke:'#2e5c24', eye:'#fff7d6',
       accent:'<path d="M50,3 Q39,15 50,25 Q61,15 50,3 Z" fill="#3fae4a" stroke="#2e5c24" stroke-width="1.5"/>' }),
     'Bramble Ghoul': quadrupedCreature({ body:'#5c8f4a', head:'#7fbf5c', leg:'#3a5c2e', stroke:'#243d1c', eye:'#fff7d6',
       accent:'<path d="M75,30 L80,20 M85,32 L92,24 M78,38 L84,30" stroke="#2e5c24" stroke-width="2" stroke-linecap="round"/>' }),
-    'Drowned Specter': floatingCreature({ body:'#3f8fc9', head:'#6cb8e8', leg:'', stroke:'#1c4a6b', eye:'#dff6ff',
-      accent:'<path d="M50,2 C59,14 59,23 50,26 C41,23 41,14 50,2 Z" fill="#a8def2" stroke="#1c4a6b" stroke-width="1.5"/>' }),
-    'Tide Phantom': standingCreature({ body:'#4fa8e6', head:'#7cc6f2', leg:'#2f7bb8', stroke:'#1c4a6b', eye:'#fff7d6',
-      accent:'<path d="M32,10 Q50,0 68,10 Q50,6 32,10 Z" fill="#a8def2" stroke="#1c4a6b" stroke-width="1.2"/>' }),
-    'Will-o-Wisp': floatingCreature({ body:'#e8703a', head:'#ffb15c', leg:'', stroke:'#8a3a10', eye:'#fffbe0',
-      accent:'<path d="M50,2 C57,10 59,19 50,26 C41,19 43,10 50,2 Z" fill="#ffd35c" stroke="#8a3a10" stroke-width="1.5"/>' }),
-    'Ember Phantom': quadrupedCreature({ body:'#d9631f', head:'#ff8a3d', leg:'#8a3a10', stroke:'#5c2408', eye:'#fffbe0',
-      accent:'<path d="M77,28 Q81,20 85,28 Q81,24 77,28 Z" fill="#ffd35c" stroke="#8a3a10" stroke-width="1.2"/>' }),
-    'Frost Wight': standingCreature({ body:'#bfe8ff', head:'#e0f6ff', leg:'#8fd0ec', stroke:'#4a8aa8', eye:'#1c4a5c',
-      accent:'<polygon points="50,2 57,15 50,26 43,15" fill="#eaffff" stroke="#4a8aa8" stroke-width="1.5"/>' }),
-    'Rime Ghost': floatingCreature({ body:'#d8f2ff', head:'#f0fbff', leg:'', stroke:'#6badc9', eye:'#1c4a5c',
-      accent:'<polygon points="50,2 55,13 50,22 45,13" fill="#eaffff" stroke="#6badc9" stroke-width="1.2"/>' }),
-    'Gargoyle Pup': quadrupedCreature({ body:'#9a9a9a', head:'#b8b8b8', leg:'#6a6a6a', stroke:'#3a3a3a', eye:'#fff2c2',
-      accent:'<polygon points="75,32 71,22 79,26" fill="#8a8a8a" stroke="#3a3a3a" stroke-width="1"/><polygon points="88,32 92,22 95,28" fill="#8a8a8a" stroke="#3a3a3a" stroke-width="1"/>' }),
-    'Cairn Stalker': standingCreature({ body:'#a8a8a8', head:'#c2c2c2', leg:'#7a7a7a', stroke:'#4a4a4a', eye:'#fff2c2',
-      accent:'<circle cx="43" cy="9" r="5" fill="#8a8a8a" stroke="#4a4a4a" stroke-width="1"/><circle cx="57" cy="7" r="6" fill="#949494" stroke="#4a4a4a" stroke-width="1"/>' }),
-    'Static Poltergeist': floatingCreature({ body:'#e8c93a', head:'#fff2a3', leg:'', stroke:'#8a6f00', eye:'#3a2c00',
-      accent:'<polygon points="54,2 44,15 50,15 46,26 59,11 52,11" fill="#fff7c2" stroke="#8a6f00" stroke-width="1.2"/>' }),
-    'Storm Wraith': quadrupedCreature({ body:'#ccae1a', head:'#ffe066', leg:'#8a6f00', stroke:'#4a3c00', eye:'#3a2c00',
-      accent:'<polygon points="80,26 75,36 80,36 76,46" fill="#fff7c2" stroke="#8a6f00" stroke-width="1"/>' }),
     'Hollow Treant': standingCreature({ body:'#8a6a4a', head:'#a8835c', leg:'#5c452f', stroke:'#3a2a1c', eye:'#fff2c2',
       accent:'<line x1="50" y1="2" x2="50" y2="15" stroke="#3a2a1c" stroke-width="3"/><circle cx="45" cy="7" r="4" fill="#4fae4a"/><circle cx="55" cy="7" r="4" fill="#4fae4a"/>' }),
     'Rootbound Ghast': quadrupedCreature({ body:'#6a4f33', head:'#8a6a4a', leg:'#4a3620', stroke:'#2c1f12', eye:'#c2ffcf',
@@ -954,6 +989,13 @@
       + '<ellipse cx="40" cy="48" rx="9" ry="6" fill="#fff" opacity="0.3" transform="rotate(-20 40 48)"/>'
       + '</svg>'
   };
+  // Single lookup used everywhere a Toto's art is needed: painted art first (the new
+  // roster), then hand-coded SVG bodies for whatever's left.
+  function spriteFor(name, nature){
+    const img = totoImgMarkup(name, false);
+    if (img) return img;
+    return nature==='spooky' ? SPOOKY_SVG[name] : SPECIES_SVG[name];
+  }
   function rand(seed){ const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
   function uid(){ return 'id'+Date.now()+Math.floor(Math.random()*100000); }
   function rollCP(tier){
@@ -962,24 +1004,34 @@
     if (tier==='mythical') return Math.floor(3500 + Math.random()*3000);
     if (tier==='eternal') return 20000;
   }
-  function statsFromCp(cp){
-    return { maxHp:Math.round(50+cp*0.18), atk:Math.round(10+cp*0.05), strength:Math.round(8+cp*0.045), def:Math.round(8+cp*0.04), spd:Math.round(20+cp*0.01), maxEnergy:Math.round(40+cp*0.02) };
+  function statsFromCp(cp, role){
+    const m = ROLE_STAT_MULT[role] || ROLE_STAT_MULT.attacker;
+    return {
+      maxHp: Math.round((50+cp*0.18)*m.hp),
+      atk: Math.round((10+cp*0.05)*m.atk),
+      strength: Math.round((8+cp*0.045)*m.atk),
+      def: Math.round((8+cp*0.04)*m.def),
+      spd: Math.round((20+cp*0.01)*m.spd),
+      maxEnergy: Math.round((40+cp*0.02)*m.nrg)
+    };
   }
   function makeToto(tier){
     const spooky = Math.random() < 0.4 || tier==='eternal';
-    let name, sprite, emoji;
+    let name, sprite, emoji, nature;
     if (spooky){
+      nature = 'spooky';
       const pool = SPECIES.spooky;
       [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
-      sprite = SPOOKY_SVG[name] || emoji;
+      sprite = spriteFor(name, nature) || emoji;
     } else {
-      const nature = ELEMENTS[Math.floor(Math.random()*7)];
+      nature = ELEMENTS[Math.floor(Math.random()*7)];
       const pool = SPECIES[nature];
       [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
-      sprite = SPECIES_SVG[name];
+      sprite = spriteFor(name, nature);
     }
-    const cp = rollCP(tier); const s = statsFromCp(cp);
-    return { id:uid(), name, sprite, tier, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
+    const role = roleOf(name);
+    const cp = rollCP(tier); const s = statsFromCp(cp, role);
+    return { id:uid(), name, sprite, tier, nature, role, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
   }
   // Toni — a custom Eternal, always guarding the first Challenger shrine so she's easy to find.
   // Original artwork (not the reference photo) — a small animated inline SVG so she reads
@@ -1134,16 +1186,17 @@
   const DEX_SPECIES = [];
   Object.keys(SPECIES).forEach(nature=>{
     SPECIES[nature].forEach(([name])=>{
-      DEX_SPECIES.push({ name, nature, sprite: nature==='spooky' ? SPOOKY_SVG[name] : SPECIES_SVG[name] });
+      DEX_SPECIES.push({ name, nature, role: roleOf(name), sprite: spriteFor(name, nature) });
     });
   });
   function makeToniGuardian(){
-    const cp = 20000; const s = statsFromCp(cp);
-    return { id:uid(), name:'Toni', sprite:'🎃', tier:'eternal', level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy, isToni:true };
+    const cp = 20000; const s = statsFromCp(cp, 'supporter');
+    return { id:uid(), name:'Toni', sprite:'🎃', tier:'eternal', role:'supporter', level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy, isToni:true };
   }
   function makeFixedEternal(name, sprite){
-    const cp = 20000; const s = statsFromCp(cp);
-    return { id:uid(), name, sprite, tier:'eternal', level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
+    const role = roleOf(name);
+    const cp = 20000; const s = statsFromCp(cp, role);
+    return { id:uid(), name, sprite, tier:'eternal', role, level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
   }
   // Grimhollow — the Ashen Shrine's guardian: a grim-reaper skeleton in a black cloak
   // with a glowing-edged scythe.
@@ -1241,7 +1294,7 @@
     if (t.cp >= cap || t.level >= TOTO_MAX_LEVEL) return false;
     const step = Math.max(25, Math.round((cap - t.cp) * 0.18));
     t.cp = Math.min(cap, t.cp + step); t.level = Math.min(TOTO_MAX_LEVEL, t.level + 1);
-    const s = statsFromCp(t.cp);
+    const s = statsFromCp(t.cp, t.role);
     t.maxHp=s.maxHp; t.hp=s.maxHp; t.atk=s.atk; t.strength=s.strength; t.def=s.def; t.spd=s.spd; t.maxEnergy=s.maxEnergy; t.energy=s.maxEnergy;
     return true;
   }
@@ -1426,16 +1479,19 @@
   // ---------------- STARTER SELECT (new accounts only) ----------------
   function makeStarterToto(natureKey){
     const [name] = SPECIES[natureKey][0];
-    const cp = rollCP('normal'); const s = statsFromCp(cp);
-    return { id:uid(), name, sprite: SPECIES_SVG[name], tier:'normal', nature:natureKey, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
+    const role = roleOf(name);
+    const cp = rollCP('normal'); const s = statsFromCp(cp, role);
+    return { id:uid(), name, sprite: spriteFor(name, natureKey), tier:'normal', nature:natureKey, role, cp, level:1, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy };
   }
   function showStarterSelect(){
     const grid = $('#starter-grid'); grid.innerHTML='';
     STARTER_NATURES.forEach((nature, i)=>{
       const [name] = SPECIES[nature][0];
+      const role = roleOf(name), ri = ROLE_INFO[role];
       const card = document.createElement('div'); card.className='starter-card' + (i===0?' sel':'');
       card.dataset.nature = nature;
-      card.innerHTML = '<div class="sp">'+SPECIES_SVG[name]+'</div><div class="nm">'+name+'</div><div class="nature">'+nature+'</div>';
+      card.innerHTML = '<div class="sp">'+spriteFor(name, nature)+'</div><div class="nm">'+name+'</div>'
+        + '<div class="role-badge" style="color:'+ri.color+';">'+ri.icon+' '+ri.label+'</div>';
       card.onclick = ()=>{ $$('.starter-card').forEach(c=>c.classList.remove('sel')); card.classList.add('sel'); };
       grid.appendChild(card);
     });
@@ -2122,7 +2178,7 @@
   }
 
   const GYM_NAMES = ['Ashfall Gym','Frostpeak Gym','Thunder Gym','Bramble Gym','Cinderpeak Gym','Mossmere Gym','Stormvale Gym','Hollowreach Gym'];
-  const MAX_WILD_TOTOS = 24, MAX_GYMS = 10; // kept low — each Toto is an animated SVG, and too many at once is what was causing the lag
+  const MAX_WILD_TOTOS = 38, MAX_GYMS = 10; // raised from 24 now that the painted-art totos render as plain <img>s (cheaper than the animated multi-path SVGs) — see performance notes elsewhere in this file before raising further
 
   function appendTotoNode(t){
     const node = document.createElement('div'); node.className='toto-node';
@@ -2135,7 +2191,7 @@
   }
   const RESPAWN_DELAY_MS = 3*60*1000; // a caught spot re-spawns something after ~3 minutes
   const AMBIENT_SPAWN_INTERVAL_MS = 20*1000; // check fairly often, keeps the area from ever feeling empty
-  const NEARBY_KEEP_MIN = 3, NEARBY_KEEP_MAX = 4; // aim to always have this many within easy walking reach
+  const NEARBY_KEEP_MIN = 5, NEARBY_KEEP_MAX = 7; // aim to always have this many within easy walking reach
   const NEARBY_RADIUS_M = 200;
   const PRUNE_RADIUS_M = 450; // Totos further than this than are quietly removed to keep the map light
   function removeTotoFromMap(t){
@@ -2162,7 +2218,7 @@
     window.__totoAmbientSpawnTimer = setInterval(()=>{
       if (!state.geoAnchor || !state.playerWorldPos) return;
       pruneFarTotos();
-      // Keep 3-4 wild Totos within easy walking reach at all times — spawn more the
+      // Keep 5-7 wild Totos within easy walking reach at all times — spawn more the
       // moment the count nearby drops below that, not on a fixed low-odds timer.
       const nearbyCount = state.wildTotos.filter(t=> distanceMetersToWorldPoint(t._x,t._y) < NEARBY_RADIUS_M).length;
       if (nearbyCount < NEARBY_KEEP_MAX && state.wildTotos.length < MAX_WILD_TOTOS){
@@ -2341,7 +2397,7 @@
 
     // wild Totos for this chunk — spawn immediately, don't wait on the network
     if (state.wildTotos.length < MAX_WILD_TOTOS){
-      const wildCount = 1 + Math.floor(rand(baseSeed+50)*2);
+      const wildCount = 2 + Math.floor(rand(baseSeed+50)*3);
       for (let i=0;i<wildCount;i++){
         const s = baseSeed + i*233.7;
         const east = centerEast + (rand(s)-0.5)*CHUNK_SIZE_M;
@@ -2530,7 +2586,10 @@
     if (state.collection.length===0){ grid.innerHTML = '<p style="grid-column:1/-1; color:#999; font-weight:700; font-size:13px;">No Totos yet — battle a wild Toto on the map to catch one.</p>'; return; }
     state.collection.slice().sort((a,b)=>b.cp-a.cp).forEach(t=>{
       const card = document.createElement('div'); card.className='toto-card';
-      card.innerHTML = '<div class="sp'+glowClassFor(t.tier)+'">'+spriteMarkup(t)+'</div><div class="nm">'+t.name+'</div><div class="lv">Lv.'+t.level+'</div><div class="cp">PWR '+t.cp+'</div><div class="tier-badge tier-'+t.tier+'">'+t.tier+'</div>';
+      const ri = ROLE_INFO[t.role] || ROLE_INFO.attacker;
+      card.innerHTML = '<div class="sp'+glowClassFor(t.tier)+'">'+spriteMarkup(t)+'</div><div class="nm">'+t.name+'</div>'
+        + '<div class="role-badge" style="color:'+ri.color+';">'+ri.icon+' '+ri.label+'</div>'
+        + '<div class="lv">Lv.'+t.level+'</div><div class="cp">PWR '+t.cp+'</div><div class="tier-badge tier-'+t.tier+'">'+t.tier+'</div>';
       card.onclick = ()=> openDetail(t.id);
       grid.appendChild(card);
     });
@@ -2906,7 +2965,7 @@
     return Math.max(2, Math.round(dmg));
   }
   function fighterFromToto(t){
-    return { ref:t, name:t.name, sprite:spriteMarkup(t), level:t.level, cp:t.cp, tier:t.tier, maxHp:t.maxHp, hp:t.maxHp, atk:t.atk, strength:t.strength, def:t.def, spd:t.spd, maxEnergy:t.maxEnergy, energy:t.maxEnergy, isToni:!!t.isToni };
+    return { ref:t, name:t.name, sprite:spriteMarkup(t), level:t.level, cp:t.cp, tier:t.tier, role:t.role||'attacker', maxHp:t.maxHp, hp:t.maxHp, atk:t.atk, strength:t.strength, def:t.def, spd:t.spd, maxEnergy:t.maxEnergy, energy:t.maxEnergy, isToni:!!t.isToni };
   }
   function strongestToto(){ return state.collection.length ? state.collection.slice().sort((a,b)=>b.cp-a.cp)[0] : null; }
 
@@ -2921,7 +2980,7 @@
     // has completely normal health for its tier, not this temporary raid buff.
     if (opts.mode==='solo' || opts.mode==='group'){ enemyFighter.maxHp = Math.round(enemyFighter.maxHp*2.2); enemyFighter.hp = enemyFighter.maxHp; }
     else if (opts.mode==='challenge'){ enemyFighter.maxHp = Math.round(enemyFighter.maxHp*3.2); enemyFighter.hp = enemyFighter.maxHp; }
-    battle = { mode:opts.mode, shrineName:opts.shrineName||null, team:team, player:fighterFromToto(lead), enemy:enemyFighter, opponentTemplate:opts.opponent, allies:opts.allies||[], group:(opts.allies&&opts.allies.length>0), over:false, timers:{} };
+    battle = { mode:opts.mode, shrineName:opts.shrineName||null, team:team, player:fighterFromToto(lead), enemy:enemyFighter, opponentTemplate:opts.opponent, allies:opts.allies||[], group:(opts.allies&&opts.allies.length>0), over:false, buff:null, timers:{} };
     $('#battle-title').textContent = opts.mode==='catch' ? 'Wild Encounter' : (opts.shrineName ? (opts.shrineName+' Raid') : 'Raid');
     $('#battle-stage').className = 'battle-stage ' + (opts.mode==='catch' ? 'theme-catch' : 'theme-raid');
     spawnEmbers();
@@ -2954,7 +3013,57 @@
     $('#bf-e-name').textContent=e.name; $('#bf-e-cp').textContent='PWR '+e.cp; $('#bf-e-level').textContent=e.tier; $('#bf-e-sprite').innerHTML=e.sprite;
     $('#bf-e-sprite').classList.toggle('toni-glow', e.tier==='eternal'); $('#bf-e-sprite').classList.toggle('mythical-glow', e.tier==='mythical');
     $('#bf-e-hp').style.width=Math.max(0,(e.hp/e.maxHp*100))+'%';
+    updateSpecialButton();
   }
+  // Healer and Supporter get a role-specific action here; Attacker's whole identity is
+  // just a bigger attack stat (see ROLE_STAT_MULT), so it gets no extra button — same
+  // for Tanker, whose specialty (see startBattleTimers) is passive, not something you tap.
+  function updateSpecialButton(){
+    const btn = $('#btn-special');
+    if (!battle){ btn.style.display='none'; return; }
+    const role = battle.player.role;
+    btn.classList.remove('role-healer','role-supporter');
+    if (role==='healer'){
+      btn.style.display = 'inline-block';
+      btn.classList.add('role-healer');
+      btn.textContent = '✚ Heal';
+      btn.disabled = battle.player.energy < HEAL_COST;
+    } else if (role==='supporter'){
+      btn.style.display = 'inline-block';
+      btn.classList.add('role-supporter');
+      btn.textContent = (battle.buff && battle.buff.hits>0) ? '★ Buffed ('+battle.buff.hits+')' : '★ Buff';
+      btn.disabled = battle.player.energy < BUFF_COST || (battle.buff && battle.buff.hits>0);
+    } else {
+      btn.style.display = 'none';
+    }
+  }
+  const HEAL_COST = 20, BUFF_COST = 15;
+  $('#btn-special').onclick = ()=>{
+    if (!battle || battle.over) return;
+    const role = battle.player.role;
+    if (role==='healer'){
+      if (battle.player.energy < HEAL_COST) return;
+      battle.player.energy -= HEAL_COST;
+      const healAmt = Math.round(battle.player.maxHp*0.25);
+      battle.player.hp = Math.min(battle.player.maxHp, battle.player.hp+healAmt);
+      let healedAllies = 0;
+      battle.allies.forEach((ally,i)=>{
+        if (ally.hp<=0) return;
+        ally.hp = Math.min(100, ally.hp+25);
+        const fill = $('#ally-row').children[i] && $('#ally-row').children[i].querySelector('.ally-hp-fill');
+        if (fill) fill.style.width = ally.hp+'%';
+        healedAllies++;
+      });
+      renderBattle();
+      battleLog('✚ '+battle.player.name+' heals '+healAmt+' HP'+(healedAllies?' and patches up the whole team!':'!'));
+    } else if (role==='supporter'){
+      if (battle.player.energy < BUFF_COST || (battle.buff && battle.buff.hits>0)) return;
+      battle.player.energy -= BUFF_COST;
+      battle.buff = { atkMult:1.35, defMult:1.3, hits:3 };
+      renderBattle();
+      battleLog('★ '+battle.player.name+' buffs the team — harder hits, sturdier defense for 3 rounds!');
+    }
+  };
   function battleLog(msg){ $('#battle-log').textContent = msg; }
   function flashSprite(who){ const el = who==='p' ? $('#bf-p-sprite') : $('#bf-e-sprite'); el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit'); }
   function popDamage(who, val, color){
@@ -2970,7 +3079,12 @@
     const enemyDelay = Math.max(500, 1500 - battle.enemy.spd*4);
     battle.timers.enemyTimer = setInterval(()=>{
       if (!battle || battle.over) return;
-      let dmg = computeDamage(battle.enemy.atk+battle.enemy.strength, battle.player.def, battle.player.maxHp, damageCapPct(battle.mode));
+      // A Tanker up front reduces the whole team's incoming hit via the Buff def bonus
+      // (below) same as anyone, but its real specialty is in the ally-damage loop just
+      // below this timer — allies simply don't take chip damage while a Tanker leads.
+      const buffed = battle.buff && battle.buff.hits>0;
+      const defPower = battle.player.def * (buffed ? battle.buff.defMult : 1);
+      let dmg = computeDamage(battle.enemy.atk+battle.enemy.strength, defPower, battle.player.maxHp, damageCapPct(battle.mode));
       if (battle.group) dmg = Math.round(dmg*0.6);
       battle.player.hp = Math.max(0, battle.player.hp - dmg);
       flashSprite('p'); popDamage('p', dmg, '#ff5470'); renderBattle();
@@ -2981,13 +3095,19 @@
     if (battle.group){
       battle.timers.allyTimer = setInterval(()=>{
         if (!battle||battle.over) return;
+        // "The boss has to beat the tanks first": while your active Toto is a Tanker, it
+        // draws all the aggro — your allies land their hits same as always, but take none
+        // of the return damage, which otherwise would have chipped away at them here.
+        const tanking = battle.player.role==='tanker';
         battle.allies.forEach((ally,i)=>{
           if (ally.hp<=0) return;
           const dmg = 4+Math.random()*5;
           battle.enemy.hp = Math.max(0, battle.enemy.hp-dmg);
-          ally.hp = Math.max(0, ally.hp-(2+Math.random()*4));
-          const fill = $('#ally-row').children[i] && $('#ally-row').children[i].querySelector('.ally-hp-fill');
-          if (fill) fill.style.width = ally.hp+'%';
+          if (!tanking){
+            ally.hp = Math.max(0, ally.hp-(2+Math.random()*4));
+            const fill = $('#ally-row').children[i] && $('#ally-row').children[i].querySelector('.ally-hp-fill');
+            if (fill) fill.style.width = ally.hp+'%';
+          }
         });
         renderBattle();
         if (battle.enemy.hp<=0) endBattle(true);
@@ -3000,9 +3120,12 @@
     if (!battle || battle.over) return;
     const cost = 10; let weak=false;
     if (battle.player.energy < cost) weak=true; else battle.player.energy -= cost;
-    let dmg = computeDamage(battle.player.atk+battle.player.strength, battle.enemy.def, battle.enemy.maxHp, damageCapPct(battle.mode));
+    const buffed = battle.buff && battle.buff.hits>0;
+    const atkPower = (battle.player.atk+battle.player.strength) * (buffed ? battle.buff.atkMult : 1);
+    let dmg = computeDamage(atkPower, battle.enemy.def, battle.enemy.maxHp, damageCapPct(battle.mode));
     if (weak) dmg = Math.round(dmg*0.35);
     battle.enemy.hp = Math.max(0, battle.enemy.hp-dmg);
+    if (buffed) battle.buff.hits--;
     flashSprite('e'); popDamage('e', dmg, '#fff'); renderBattle();
     battleLog(weak ? 'Low energy! Weak hit for '+dmg+'.' : 'You strike for '+dmg+'!');
     if (battle.enemy.hp<=0) endBattle(true);

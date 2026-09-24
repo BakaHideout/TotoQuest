@@ -1,9 +1,19 @@
-const CACHE_NAME = 'totoquest-v14';
+const CACHE_NAME = 'totoquest-v15';
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png',
   './assets/loading-bg.jpg', './assets/girl-front.png', './assets/girl-back.png',
   './assets/boy-front.png', './assets/boy-back.png',
   './assets/girl-front-sm.png', './assets/girl-back-sm.png',
-  './assets/boy-front-sm.png', './assets/boy-back-sm.png'];
+  './assets/boy-front-sm.png', './assets/boy-back-sm.png',
+  './assets/totos/pumpkin_pup.png', './assets/totos/sm/pumpkin_pup.png',
+  './assets/totos/cobweb_crab.png', './assets/totos/sm/cobweb_crab.png',
+  './assets/totos/boo_berry.png', './assets/totos/sm/boo_berry.png',
+  './assets/totos/candle_imp.png', './assets/totos/sm/candle_imp.png',
+  './assets/totos/candy_bat.png', './assets/totos/sm/candy_bat.png',
+  './assets/totos/grave_pebble.png', './assets/totos/sm/grave_pebble.png',
+  './assets/totos/potion_slime.png', './assets/totos/sm/potion_slime.png',
+  './assets/totos/moon_moth.png', './assets/totos/sm/moon_moth.png',
+  './assets/totos/bone_bean.png', './assets/totos/sm/bone_bean.png',
+  './assets/totos/witchcap_sprout.png', './assets/totos/sm/witchcap_sprout.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
