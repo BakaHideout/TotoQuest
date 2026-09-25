@@ -825,6 +825,22 @@
     const src = 'assets/totos/'+(small?'sm/':'')+file+'.png';
     return '<img class="creature-img" src="'+src+'" alt="'+name+'" draggable="false">';
   }
+  // Legendary tier is a fixed roster of 10 named legendaries (your own reference art,
+  // background removed) rather than a random species rolled at a high CP band — every
+  // gym boss/legendary catch is one of these ten, never a generic species at "legendary" power.
+  const LEGENDARY_SPECIES = [
+    { name:'Shadow Reaper',    role:'attacker',  types:'Fire · Shadow',    img:'shadow_reaper' },
+    { name:'Frost Wyrm',       role:'tanker',    types:'Ice · Flying',     img:'frost_wyrm' },
+    { name:'Pumpkin Colossus', role:'healer',    types:'Plant · Fire',     img:'pumpkin_colossus' },
+    { name:'Nightmare Queen',  role:'supporter', types:'Bug · Shadow',     img:'nightmare_queen' },
+    { name:'Blood Moon Wolf',  role:'attacker',  types:'Fire · Dark',      img:'blood_moon_wolf' },
+    { name:'Thunder Serpent',  role:'attacker',  types:'Electric · Flying',img:'thunder_serpent' },
+    { name:'Toxic Basilisk',   role:'healer',    types:'Poison · Dragon',  img:'toxic_basilisk' },
+    { name:'Soul Lantern',     role:'supporter', types:'Ghost · Psychic',  img:'soul_lantern' },
+    { name:'Obsidian Golem',   role:'tanker',    types:'Rock · Dark',      img:'obsidian_golem' },
+    { name:'Hexen Drake',      role:'supporter', types:'Dragon · Poison',  img:'hexen_drake' }
+  ];
+  LEGENDARY_SPECIES.forEach(sp=>{ SPECIES_ROLE[sp.name] = sp.role; TOTO_IMG[sp.name] = sp.img; });
   const ELEMENTS = Object.keys(SPECIES);
   const STARTER_NATURES = ELEMENTS.filter(e=>e!=='spooky');
   const TIER_CAP = {normal:1500, legendary:3500, mythical:6500, eternal:20000};
@@ -1016,18 +1032,23 @@
     };
   }
   function makeToto(tier){
-    const spooky = Math.random() < 0.4 || tier==='eternal';
     let name, sprite, emoji, nature;
-    if (spooky){
-      nature = 'spooky';
-      const pool = SPECIES.spooky;
-      [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
-      sprite = spriteFor(name, nature) || emoji;
+    if (tier === 'legendary'){
+      const sp = LEGENDARY_SPECIES[Math.floor(Math.random()*LEGENDARY_SPECIES.length)];
+      name = sp.name; nature = sp.types; sprite = spriteFor(name, nature);
     } else {
-      nature = ELEMENTS[Math.floor(Math.random()*7)];
-      const pool = SPECIES[nature];
-      [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
-      sprite = spriteFor(name, nature);
+      const spooky = Math.random() < 0.4 || tier==='eternal';
+      if (spooky){
+        nature = 'spooky';
+        const pool = SPECIES.spooky;
+        [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
+        sprite = spriteFor(name, nature) || emoji;
+      } else {
+        nature = ELEMENTS[Math.floor(Math.random()*7)];
+        const pool = SPECIES[nature];
+        [name, emoji] = pool[Math.floor(Math.random()*pool.length)];
+        sprite = spriteFor(name, nature);
+      }
     }
     const role = roleOf(name);
     const cp = rollCP(tier); const s = statsFromCp(cp, role);
@@ -1189,6 +1210,9 @@
       DEX_SPECIES.push({ name, nature, role: roleOf(name), sprite: spriteFor(name, nature) });
     });
   });
+  // The 10 fixed legendaries get their own Dex list (see LEGENDARY_SPECIES) since that
+  // tier no longer rolls from the general species pool above.
+  const LEGENDARY_DEX = LEGENDARY_SPECIES.map(sp=>({ name: sp.name, nature: sp.types, role: sp.role, sprite: spriteFor(sp.name, sp.types) }));
   function makeToniGuardian(){
     const cp = 20000; const s = statsFromCp(cp, 'supporter');
     return { id:uid(), name:'Toni', sprite:'🎃', tier:'eternal', role:'supporter', level:1, cp, maxHp:s.maxHp, hp:s.maxHp, atk:s.atk, strength:s.strength, def:s.def, spd:s.spd, maxEnergy:s.maxEnergy, energy:s.maxEnergy, isToni:true };
@@ -2614,7 +2638,7 @@
       { name:'Pumpkin Rider', sprite:PUMPKIN_RIDER_SVG },
       { name:'PandaQueen', sprite:PANDAQUEEN_SVG }
     ];
-    let caughtCount = 0, totalCount = ETERNAL_ROSTER.length + DEX_SPECIES.length*3;
+    let caughtCount = 0, totalCount = ETERNAL_ROSTER.length + DEX_SPECIES.length*2 + LEGENDARY_DEX.length;
     let html = '<div class="dex-tier-header">👑 Eternal</div><div class="dex-grid">';
     ETERNAL_ROSTER.forEach(e=>{
       const owned = e.name==='Toni' ? state.collection.find(t=>t.isToni) : state.collection.find(t=>t.name===e.name);
@@ -2624,8 +2648,9 @@
     html += '</div>';
     ['mythical','legendary','normal'].forEach(tier=>{
       const label = {mythical:'💜 Mythical', legendary:'💙 Legendary', normal:'💚 Normal'}[tier];
+      const list = tier==='legendary' ? LEGENDARY_DEX : DEX_SPECIES;
       html += '<div class="dex-tier-header">'+label+'</div><div class="dex-grid">';
-      DEX_SPECIES.forEach(sp=>{
+      list.forEach(sp=>{
         const owned = bestFor(sp.name, tier);
         if (owned) caughtCount++;
         html += dexCardHtml(sp.name, sp.sprite, owned);
